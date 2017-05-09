@@ -96,21 +96,23 @@ public class Client {
 		String file = pickFile();
 		byte[] request = buildRQ(file, writeReq);
 		byte[] data = new byte[512];
-		BufferedInputStream in = new BufferedInputStream(new FileInputStream("Client\\" + file));
+		BufferedInputStream in = new BufferedInputStream(new FileInputStream("Client/" + file));
 		
 		sndPkt = new DatagramPacket(request, request.length, target, 69);
 		send();
 		receive();
 		port = rcvPkt.getPort();
+		target = rcvPkt.getAddress();
 		
 		sizeRead = in.read(data);
 		
 		while (sizeRead != -1) {
-			request = new byte[516];
+			request = new byte[4 + sizeRead];
 			System.arraycopy(opcode, 0, request, 0, 2);
 			System.arraycopy(block, 0, request, 2, 2);
-			System.arraycopy(data, 0, request, 5, data.length);
+			System.arraycopy(data, 0, request, 4, sizeRead);
 			sndPkt = new DatagramPacket(request, request.length, target, port);
+			System.out.println(sndPkt.getLength());
 			send();
 			receive();
 			
@@ -118,13 +120,12 @@ public class Client {
 			sizeRead = in.read(data);
 		}
 		in.close();
-		System.out.println("Here");
 	}
 	
 	private void startRead() throws IOException {
 		byte[] data;
 		String file = pickFile();
-		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream("Client\\" + file));
+		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream("Client/" + file));
 
 		byte[] request = buildRQ(file, readReq);
 		byte[] block = {0x00, 0x01};

@@ -247,11 +247,11 @@ public class Server {
 		private int port;
 		private String filename;
 		private DatagramPacket sPkt, rPkt;
+		private byte[] rData = new byte[216];
 		
 		public Transfer(Boolean type, DatagramPacket request, String filename) {
 			this.type = type;
-			this.filename = System.getProperty("user.dir") + "\\Server\\" + filename;
-			System.out.println(this.filename);
+			this.filename = "Server/" + filename.trim();
 			
 			target = request.getAddress();
 			port = request.getPort();
@@ -271,10 +271,9 @@ public class Server {
 			}
 		}
 		
-		public void receive(DatagramPacket pkt) {
-			pkt = new DatagramPacket(new byte[516], 516);
+		public void receive() {
 			try {
-				sock.receive(request);
+				sock.receive(rPkt);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -282,14 +281,7 @@ public class Server {
 		
 		private void write() throws IOException {
 			byte[] data;
-			BufferedOutputStream out;
-			
-			try {
-				out = new BufferedOutputStream(new FileOutputStream(filename));
-			} catch (FileNotFoundException e) {
-				new File(filename).createNewFile();
-				out = new BufferedOutputStream(new FileOutputStream(filename));
-			}
+			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(filename));
 			byte[] response = new byte[4];
 			byte[] block = {0x00, 0x00};
 			
@@ -300,21 +292,22 @@ public class Server {
 			
 			sPkt = new DatagramPacket(response, response.length, target, port);
 			send(sPkt);
-			receive(rPkt);
-			
+			receive();
+
 			do {
 				data = new byte[rPkt.getLength() - 4];
-				System.arraycopy(rPkt.getData(), 4, data, 0, rPkt.getLength() - 4);
+				System.arraycopy(rPkt.getData(), 5, data, 0, rPkt.getLength() - 5);
+				System.out.println(rPkt.getData().length);
 				out.write(data, 0, data.length);
 				
 				response = new byte[4];
 				response[0] = 0x00;
 				response[1] = 0x04;
-				System.arraycopy(block, 0, request, 2, 2);
+				System.arraycopy(block, 0, response, 2, 2);
 				
 				sPkt = new DatagramPacket(response, response.length, target, port);
 				send(sPkt);
-				receive(rPkt);
+				receive();
 				
 				if (++block[1] == 0) block[0]++;
 			} while (rPkt.getData().length > 511);
@@ -338,7 +331,7 @@ public class Server {
 				System.arraycopy(data, 0, response, 5, data.length);
 				sPkt = new DatagramPacket(response, sizeRead + 4, target, port);
 				send(sPkt);
-				receive(rPkt);
+				receive();
 				
 				if (++block[1] == 0) block[0]++;
 				sizeRead = in.read(data);
