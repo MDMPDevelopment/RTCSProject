@@ -32,6 +32,8 @@ public class Server {
 		verbose = false;
 		test = false;
 		
+		new UI().start();
+		
 		//transfers = new ArrayList<Transfer>();
 	}
 	
@@ -87,20 +89,22 @@ public class Server {
 	 * in any case combination.
 	 */
 	public void parsePacket() {
+		System.out.println("Parsing");
 		Transfer transfer;
 		byte[] data = request.getData();
+		System.out.println(new String(data));
 		file = new byte[data.length];
 		mode = new byte[netascii.length()];
 		int i = 2;
 		int j = 0;
-		
+		System.out.println("1");
 		valid = data[0] == 0x00;
 		valid = (data[1] == 0x01 || data[1] == 0x02) && valid;
 		
 		while (data[i] != 0x00 && i < data.length) {
 			file[j++] = data[i++];
 		}
-		
+		System.out.println("2");
 		valid = i > 2 && i++ < data.length && valid;
 		
 		j = 0;
@@ -108,15 +112,17 @@ public class Server {
 		while (data[i] != 0x00 && i < data.length && j < netascii.length()) {
 			mode[j++] = data[i++]; 
 		}
-		
+		System.out.println("3");
 		valid = (new String(mode).toLowerCase().equals(netascii) || new String(mode).toLowerCase().equals(octet)) && valid;
 		valid = data[i] == 0x00 && valid;
 		
 		if (valid) {
+			System.out.println("Parsed");
 			//transfers.add(new Transfer(data[1] == 0x02, request, new String(file)));
 			transfer = new Transfer(data[1] == 0x02, request, new String(file));
 			transfer.start();
 		}
+		System.out.println("4");
 	}
 	
 	/**
@@ -187,6 +193,49 @@ public class Server {
 		}
 	}
 	
+	private class UI extends Thread {
+		private Boolean quit;
+		
+		public UI () {
+			quit = false;
+		}
+		
+		private void printUI() {
+			System.out.println("T - Toggle test mode");
+			System.out.println("V - Toggle verbose mode");
+			System.out.println("Q - Quit");
+		}
+		
+		public void ui() throws IOException {
+			String command;
+			Scanner input = new Scanner(System.in);
+			
+			while (!quit) {
+				printUI();
+				command = input.nextLine();
+				
+				switch (command.toLowerCase().charAt(0)) {
+					case 'q': quit = true;
+							  input.close();
+							  quit();
+							  break;
+					case 't': test = !test;
+							  break;
+					case 'v': verbose = !verbose;
+							  break;
+				}
+			}
+		}
+		
+		public void run() {
+			try {
+				this.ui();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+	
 	private class Transfer extends Thread {
 		private Boolean type;
 		private DatagramSocket sock;
@@ -197,7 +246,8 @@ public class Server {
 		
 		public Transfer(Boolean type, DatagramPacket request, String filename) {
 			this.type = type;
-			this.filename = filename;
+			this.filename = "C:/Users/MatthewPenner/Desktop/Server/" + filename;
+			System.out.println(filename);
 			
 			target = request.getAddress();
 			port = request.getPort();
@@ -296,7 +346,6 @@ public class Server {
 				try {
 					read();
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}
@@ -305,9 +354,9 @@ public class Server {
 	
 	public static void main(String[] args) throws IOException {
 		Server server = new Server();
+		//server.ui();
 		
 		while (true) {
-			server.ui();
 			server.receive();
 			server.parsePacket();
 		}

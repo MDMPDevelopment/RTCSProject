@@ -89,7 +89,7 @@ public class Client {
 		String file = pickFile();
 		byte[] request = buildRQ(file, writeReq);
 		byte[] data = new byte[512];
-		BufferedInputStream in = new BufferedInputStream(new FileInputStream(file));
+		BufferedInputStream in = new BufferedInputStream(new FileInputStream("C:/Users/MatthewPenner/Desktop/Client/" + file));
 		
 		sndPkt = new DatagramPacket(request, request.length, target, 69);
 		send();
@@ -111,12 +111,14 @@ public class Client {
 			sizeRead = in.read(data);
 		}
 		in.close();
+		System.out.println("Here");
 	}
 	
 	private void startRead() throws IOException {
 		byte[] data;
 		String file = pickFile();
-		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(file));
+		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream("C:/Users/MatthewPenner/Desktop/Client" + file));
+		System.out.println(out.toString());
 		byte[] request = buildRQ(file, readReq);
 		byte[] block = {0x00, 0x01};
 		byte[] opcode = {0x00, 0x04};
@@ -152,7 +154,7 @@ public class Client {
 		System.arraycopy(code, 0, request, 0, 2);		
 		System.arraycopy(file.getBytes(), 0, request, 2, file.length());
 		request[file.length() + 1] = 0x00;
-		System.out.println(new String(request));
+		//System.out.println(new String(request));
 		System.arraycopy(mode.getBytes(), 0, request, file.length() + 3, mode.length());
 		request[request.length - 1] = 0x00;
 		
