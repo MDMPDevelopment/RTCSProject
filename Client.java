@@ -138,7 +138,7 @@ public class Client {
 		
 		do {
 			data = new byte[rcvPkt.getLength() - 4];
-			System.arraycopy(rcvPkt.getData(), 4, data, 0, rcvPkt.getLength() - 4);
+			System.arraycopy(rcvPkt.getData(), 3, data, 0, rcvPkt.getLength() - 4);
 			out.write(data, 0, data.length);
 			
 			request = new byte[4];
@@ -153,6 +153,7 @@ public class Client {
 		} while (rcvPkt.getData().length > 511);
 		out.close();
 	}
+	
 	
 	private byte[] buildRQ(String file, byte opcode) {
 		byte[] request;

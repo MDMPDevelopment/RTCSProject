@@ -272,6 +272,7 @@ public class Server {
 		}
 		
 		public void receive() {
+			rPkt = new DatagramPacket(rData, 216);
 			try {
 				sock.receive(rPkt);
 			} catch (IOException e) {
@@ -297,7 +298,7 @@ public class Server {
 			do {
 				data = new byte[rPkt.getLength() - 4];
 				System.arraycopy(rPkt.getData(), 5, data, 0, rPkt.getLength() - 5);
-				System.out.println(rPkt.getData().length);
+				System.out.println(new String(data));
 				out.write(data, 0, data.length);
 				
 				response = new byte[4];
