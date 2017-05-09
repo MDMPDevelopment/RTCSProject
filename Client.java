@@ -33,6 +33,9 @@ public class Client {
 		sock = new DatagramSocket();
 	}
 	
+	/**
+	 * Displays the user options.
+	 */
 	private void printUI() {
 		System.out.println("T - Toggle test mode");
 		System.out.println("V - Toggle verbose mode");
@@ -41,6 +44,10 @@ public class Client {
 		System.out.println("Q - Quit");
 	}
 	
+	/**
+	 * Prompts the user to enter the name of the file to be transferred.
+	 * @return The name of the file to be transferred.
+	 */
 	private String pickFile() {
 		String file;
 		Scanner stream = new Scanner(System.in);
@@ -89,7 +96,7 @@ public class Client {
 		String file = pickFile();
 		byte[] request = buildRQ(file, writeReq);
 		byte[] data = new byte[512];
-		BufferedInputStream in = new BufferedInputStream(new FileInputStream("C:/Users/MatthewPenner/Desktop/Client/" + file));
+		BufferedInputStream in = new BufferedInputStream(new FileInputStream("Client\\" + file));
 		
 		sndPkt = new DatagramPacket(request, request.length, target, 69);
 		send();
@@ -117,8 +124,8 @@ public class Client {
 	private void startRead() throws IOException {
 		byte[] data;
 		String file = pickFile();
-		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream("C:/Users/MatthewPenner/Desktop/Client" + file));
-		System.out.println(out.toString());
+		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream("Client\\" + file));
+
 		byte[] request = buildRQ(file, readReq);
 		byte[] block = {0x00, 0x01};
 		byte[] opcode = {0x00, 0x04};
@@ -153,7 +160,7 @@ public class Client {
 		
 		System.arraycopy(code, 0, request, 0, 2);		
 		System.arraycopy(file.getBytes(), 0, request, 2, file.length());
-		request[file.length() + 1] = 0x00;
+		request[file.length() + 2] = 0x00;
 		//System.out.println(new String(request));
 		System.arraycopy(mode.getBytes(), 0, request, file.length() + 3, mode.length());
 		request[request.length - 1] = 0x00;
@@ -161,6 +168,10 @@ public class Client {
 		return request;
 	}
 	
+	/**
+	 * 
+	 * @throws IOException
+	 */
 	public void ui() throws IOException {
 		String command;
 		Scanner input = new Scanner(System.in);

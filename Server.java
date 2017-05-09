@@ -2,7 +2,9 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -12,7 +14,7 @@ import java.util.Scanner;
 
 public class Server {
 	private static final String netascii = "netascii";
-	private static final String octet = "octet";
+	private static final String octet = "octet   ";
 	
 	private DatagramSocket port69;
 	private byte[] mode, file;
@@ -89,22 +91,22 @@ public class Server {
 	 * in any case combination.
 	 */
 	public void parsePacket() {
-		System.out.println("Parsing");
+		//System.out.println("Parsing");
 		Transfer transfer;
 		byte[] data = request.getData();
-		System.out.println(new String(data));
+		//System.out.println(new String(data));
 		file = new byte[data.length];
 		mode = new byte[netascii.length()];
 		int i = 2;
 		int j = 0;
-		System.out.println("1");
+		//System.out.println(valid);
 		valid = data[0] == 0x00;
 		valid = (data[1] == 0x01 || data[1] == 0x02) && valid;
 		
 		while (data[i] != 0x00 && i < data.length) {
 			file[j++] = data[i++];
 		}
-		System.out.println("2");
+		//System.out.println(valid);
 		valid = i > 2 && i++ < data.length && valid;
 		
 		j = 0;
@@ -112,17 +114,19 @@ public class Server {
 		while (data[i] != 0x00 && i < data.length && j < netascii.length()) {
 			mode[j++] = data[i++]; 
 		}
-		System.out.println("3");
-		valid = (new String(mode).toLowerCase().equals(netascii) || new String(mode).toLowerCase().equals(octet)) && valid;
+		//System.out.println(valid);
+		//System.out.println(new String(mode).toLowerCase());
+		//valid = (new String(mode).toLowerCase().equals(netascii) || new String(mode).toLowerCase().equals(octet)) && valid;
+		//System.out.println(valid);
 		valid = data[i] == 0x00 && valid;
-		
+		//System.out.println(valid);
 		if (valid) {
-			System.out.println("Parsed");
+			//System.out.println("Parsed");
 			//transfers.add(new Transfer(data[1] == 0x02, request, new String(file)));
 			transfer = new Transfer(data[1] == 0x02, request, new String(file));
 			transfer.start();
 		}
-		System.out.println("4");
+		//System.out.println(valid);
 	}
 	
 	/**
@@ -246,8 +250,8 @@ public class Server {
 		
 		public Transfer(Boolean type, DatagramPacket request, String filename) {
 			this.type = type;
-			this.filename = "C:/Users/MatthewPenner/Desktop/Server/" + filename;
-			System.out.println(filename);
+			this.filename = System.getProperty("user.dir") + "\\Server\\" + filename;
+			System.out.println(this.filename);
 			
 			target = request.getAddress();
 			port = request.getPort();
@@ -278,7 +282,14 @@ public class Server {
 		
 		private void write() throws IOException {
 			byte[] data;
-			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(filename));
+			BufferedOutputStream out;
+			
+			try {
+				out = new BufferedOutputStream(new FileOutputStream(filename));
+			} catch (FileNotFoundException e) {
+				new File(filename).createNewFile();
+				out = new BufferedOutputStream(new FileOutputStream(filename));
+			}
 			byte[] response = new byte[4];
 			byte[] block = {0x00, 0x00};
 			
