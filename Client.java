@@ -1,4 +1,8 @@
 import java.net.DatagramSocket;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
@@ -7,9 +11,7 @@ import java.net.UnknownHostException;
 import java.util.Scanner;
 
 public class Client {
-	private static final int sendLength = 100;
 	private static final int receiveLength = 100;
-	private static final int sendPort = 23;
 	private static final byte readReq = 0x01;
 	private static final byte writeReq = 0x02;
 	private static final String mode = "octet";
@@ -18,14 +20,12 @@ public class Client {
 	private DatagramPacket sndPkt, rcvPkt;
 	private InetAddress target;
 	
-	private boolean test, verbose;
+	private int port;
 	
-	private byte[] sndData, rcvData;
+	private boolean test, verbose;
 	
 	public Client() throws UnknownHostException, SocketException {
 		target = InetAddress.getLocalHost();
-		sndData = new byte[sendLength];
-		rcvData = new byte[receiveLength];
 		
 		test = false;
 		verbose = false;
@@ -42,59 +42,13 @@ public class Client {
 	}
 	
 	private String pickFile() {
+		String file;
+		Scanner stream = new Scanner(System.in);
 		System.out.println("Enter filename.");
-		return new Scanner(System.in).nextLine();
-	}
-	
-	/**
-	 * Build DatagramPacket to send.
-	 * <p>
-	 * Builds a packet with a data array of the following format:
-	 * [0x00, packetType, fileName, 0x00, mode, 0x00]
-	 * packetType is 0x01 if the packet is for a read request, 0x02 if for a write request, and anything else if for an invalid request.
-	 *  
-	 * @param pktType The type of packet to be created.  0 if read, 1 if write, 2 if invalid.
-	 */
-	public void createPkt(int pktType, String path) {
-		int i = 0;
-		byte[] fileName = path.getBytes();
-		byte[] modeByte = mode.getBytes();
+		file = stream.nextLine();
+		stream.close();
 		
-		// Set the first two bytes of the data buffer according to the request type.
-		sndData[0] = 0x00;
-		sndData[1] = pktType == 1 ? writeReq : readReq;
-		if (pktType == 2) sndData[1] = 0x05;
-		
-		// Copy over the file name to the data buffer.
-		while (i < fileName.length) {
-			sndData[2 + i] = fileName[i++];
-		}
-		
-		i++;
-		
-		// Add the separating zero byte.
-		sndData[i++] = 0x00;
-		
-		// Copy over the mode to the data buffer.
-		for (int j=0; j < modeByte.length; j++) {
-			sndData[i++] = modeByte[j];
-		}
-		
-		// Add the terminating zero byte.
-		sndData[i] = 0x00;
-		
-		// Print the data to be sent as a String.
-		System.out.println(new String(sndData));
-		
-		// Print the data to be sent as bytes.
-		try {
-			System.out.write(sndData);
-			System.out.println();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		
-		sndPkt = new DatagramPacket(sndData, i, target, sendPort);
+		return file;
 	}
 	
 	/**
@@ -102,7 +56,7 @@ public class Client {
 	 * <p>
 	 * Note that this function should never be called until after createPkt has been called.
 	 */
-	public void send() {
+	private void send() {
 		try {
 			sock.send(sndPkt);
 		} catch (IOException e) {
@@ -113,8 +67,8 @@ public class Client {
 	/**
 	 * Receive from sock into rcvPkt.
 	 */
-	public void receive() {
-		rcvPkt = new DatagramPacket(rcvData, receiveLength);
+	private void receive() {
+		rcvPkt = new DatagramPacket(new byte[516], receiveLength);
 		
 		try {
 			sock.receive(rcvPkt);
@@ -123,16 +77,83 @@ public class Client {
 		}
 	}
 	
-	/**
-	 * Prints out the data contained in rcvPkt.
-	 * <p>
-	 * Note that this function should never be called until after receive has been called.
-	 */
-	public void printData() {
-		System.out.println(new String(rcvPkt.getData()));
+	private void quit() {
+		System.exit(1);
 	}
 	
-	public void ui() {
+	private void startWrite() throws IOException {
+		int sizeRead;
+		byte[] block = {0x00, 0x01};
+		byte[] opcode = {0x00, 0x03};
+		String file = pickFile();
+		byte[] request = buildRQ(file, writeReq);
+		byte[] data = new byte[512];
+		BufferedInputStream in = new BufferedInputStream(new FileInputStream(file));
+		
+		sndPkt = new DatagramPacket(request, request.length, target, 69);
+		send();
+		receive();
+		port = rcvPkt.getPort();
+		
+		sizeRead = in.read(data);
+		
+		while (sizeRead != -1) {
+			request = new byte[516];
+			System.arraycopy(opcode, 0, request, 0, 2);
+			System.arraycopy(block, 0, request, 2, 2);
+			System.arraycopy(data, 0, request, 5, data.length);
+			sndPkt = new DatagramPacket(data, sizeRead + 4, target, port);
+			send();
+			receive();
+			
+			if (++block[1] == 0) block[0]++;
+			sizeRead = in.read(data);
+		}
+		in.close();
+	}
+	
+	private void startRead() throws IOException {
+		byte[] data;
+		String file = pickFile();
+		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(file));
+		byte[] request = buildRQ(file, readReq);
+		byte[] block = {0x00, 0x01};
+		byte[] opcode = {0x00, 0x04};
+		
+		sndPkt = new DatagramPacket(request, request.length, target, 69);
+		send();
+		receive();
+		
+		do {
+			data = new byte[rcvPkt.getLength() - 4];
+			System.arraycopy(rcvPkt.getData(), 4, data, 0, rcvPkt.getLength() - 4);
+			out.write(data, 0, data.length);
+			
+			request = new byte[4];
+			System.arraycopy(opcode, 0, request, 0, 2);
+			System.arraycopy(block, 0, request, 2, 2);
+			
+			if (++block[1] == 0) block[0]++;
+		} while (rcvPkt.getData().length > 511);
+		out.close();
+	}
+	
+	private byte[] buildRQ(String file, byte opcode) {
+		byte[] request;
+		byte[] code = {0x00, opcode};
+		request = new byte[file.length() + mode.length() + 4];
+		
+		System.arraycopy(code, 0, request, 0, 2);		
+		System.arraycopy(file.getBytes(), 0, request, 2, file.length());
+		request[file.length() + 1] = 0x00;
+		System.out.println(new String(request));
+		System.arraycopy(mode.getBytes(), 0, request, file.length() + 3, mode.length());
+		request[request.length - 1] = 0x00;
+		
+		return request;
+	}
+	
+	public void ui() throws IOException {
 		String command;
 		Scanner input = new Scanner(System.in);
 		
@@ -141,7 +162,8 @@ public class Client {
 			command = input.nextLine();
 			
 			switch (command.toLowerCase().charAt(0)) {
-				case 'q': quit();
+				case 'q': input.close();
+						  quit();
 						  break;
 				case 't': test = !test;
 						  break;
@@ -155,38 +177,8 @@ public class Client {
 		}
 	}
 	
-	public void quit() {
-		System.exit(1);
-	}
-	
-	public void startWrite() {
-		int sizeRead;
-		String file = pickFile();
-		byte[] data = new byte[512];
-		BufferedInputStream in = new BufferedInputStream(new FileInputStream("file"));
-		
-		while (sizeRead = in.read(data) != -1) {
-			createPkt(data, sizeRead);
-			send();
-			receive();
-			parseResponse();
-		}
-	}
-	
-	public void startRead() {
-		
-	}
-	
-	public static void main(String[] args) throws UnknownHostException, SocketException {
+	public static void main(String[] args) throws IOException {
 		Client client = new Client();
 		client.ui();
-		
-		/*
-		for (int i=0; i < 11; i++) {
-			client.createPkt(i != 10 ? i % 2 : 2);
-			client.send();
-			client.receive();
-			client.printData();
-		}*/
 	}
 }

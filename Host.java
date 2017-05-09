@@ -93,14 +93,14 @@ public class Host {
 	 * Should not be called before receive1().
 	 */
 	public void forward() {
-		printData(rcvPkt1);
+		//printData(rcvPkt1);
 		
 		sndPkt = new DatagramPacket(rcvPkt1.getData(), rcvPkt1.getData().length, target1, 69);
 		// Save the client IP and port to send the server's response.
 		target2 = rcvPkt1.getAddress();
 		returnPort = rcvPkt1.getPort();
 		
-		printData(sndPkt);
+		//printData(sndPkt);
 		
 		send(sndPkt, sndRcvSok);
 	}
@@ -117,11 +117,11 @@ public class Host {
 			e.printStackTrace();
 		}
 		
-		printData(rcvPkt2);
+		//printData(rcvPkt2);
 		
 		sndPkt = new DatagramPacket(rcvPkt2.getData(), rcvPkt2.getData().length, target2, returnPort);
 		
-		printData(sndPkt);
+		//printData(sndPkt);
 		
 		send(sndPkt, sndSok);
 		sndSok.close();
