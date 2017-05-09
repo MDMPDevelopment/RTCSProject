@@ -78,7 +78,8 @@ public class Client {
 	}
 	
 	private void quit() {
-		System.exit(1);
+		sock.close();
+		System.exit(0);
 	}
 	
 	private void startWrite() throws IOException {
@@ -102,7 +103,7 @@ public class Client {
 			System.arraycopy(opcode, 0, request, 0, 2);
 			System.arraycopy(block, 0, request, 2, 2);
 			System.arraycopy(data, 0, request, 5, data.length);
-			sndPkt = new DatagramPacket(data, sizeRead + 4, target, port);
+			sndPkt = new DatagramPacket(request, request.length, target, port);
 			send();
 			receive();
 			
@@ -123,6 +124,7 @@ public class Client {
 		sndPkt = new DatagramPacket(request, request.length, target, 69);
 		send();
 		receive();
+		port = rcvPkt.getPort();
 		
 		do {
 			data = new byte[rcvPkt.getLength() - 4];
@@ -132,6 +134,10 @@ public class Client {
 			request = new byte[4];
 			System.arraycopy(opcode, 0, request, 0, 2);
 			System.arraycopy(block, 0, request, 2, 2);
+			
+			sndPkt = new DatagramPacket(request, request.length, target, port);
+			send();
+			receive();
 			
 			if (++block[1] == 0) block[0]++;
 		} while (rcvPkt.getData().length > 511);
