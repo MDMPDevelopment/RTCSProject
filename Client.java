@@ -16,6 +16,8 @@ public class Client {
 	private static final byte writeReq = 0x02;
 	private static final String mode = "octet";
 	
+	private byte[] rData;
+	
 	private DatagramSocket sock;
 	private DatagramPacket sndPkt, rcvPkt;
 	private InetAddress target;
@@ -75,7 +77,8 @@ public class Client {
 	 * Receive from sock into rcvPkt.
 	 */
 	private void receive() {
-		rcvPkt = new DatagramPacket(new byte[516], receiveLength);
+		rData = new byte[516];
+		rcvPkt = new DatagramPacket(rData, 516);
 		
 		try {
 			sock.receive(rcvPkt);
@@ -143,17 +146,18 @@ public class Client {
 			} else receive();
 			if (++block[1] == 0) block[0]++;
 			data = new byte[rcvPkt.getLength() - 4];
-			System.arraycopy(rcvPkt.getData(), 3, data, 0, rcvPkt.getLength() - 4);
-			System.out.println(new String(data));
+			System.arraycopy(rcvPkt.getData(), 4, data, 0, data.length);
 			out.write(data, 0, data.length);
-			
+			out.flush();
+			System.out.println("here");
 			request = new byte[4];
 			System.arraycopy(opcode, 0, request, 0, 2);
 			System.arraycopy(block, 0, request, 2, 2);
 			
 			sndPkt = new DatagramPacket(request, request.length, target, port);
 			send();
-		} while (rcvPkt.getData().length > 511);
+			if (rcvPkt.getData().length < 516) break;
+		} while (rcvPkt.getData().length > 515);
 		out.close();
 	}
 	

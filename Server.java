@@ -253,7 +253,7 @@ public class Server {
 		private int port;
 		private String filename;
 		private DatagramPacket sPkt, rPkt;
-		private byte[] rData = new byte[216];
+		private byte[] rData = new byte[516];
 		
 		/**
 		 * Constructor for the Transfer class
@@ -284,7 +284,7 @@ public class Server {
 		}
 		
 		public void receive() {
-			rPkt = new DatagramPacket(rData, 216);
+			rPkt = new DatagramPacket(rData, 516);
 			try {
 				sock.receive(rPkt);
 			} catch (IOException e) {
@@ -314,6 +314,7 @@ public class Server {
 				data = new byte[rPkt.getLength() - 4];
 				System.arraycopy(rPkt.getData(), 4, data, 0, rPkt.getLength() - 4);
 				out.write(data, 0, data.length);
+				out.flush();
 				
 				response = new byte[4];
 				response[0] = 0x00;
@@ -322,7 +323,7 @@ public class Server {
 				
 				sPkt = new DatagramPacket(response, response.length, target, port);
 				send(sPkt);
-			} while (rPkt.getData().length > 511);
+			} while (rPkt.getData().length > 515);
 			out.close();
 		}
 		
