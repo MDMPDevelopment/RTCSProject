@@ -2,14 +2,11 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.SocketException;
-import java.util.ArrayList;
 import java.util.Scanner;
 
 public class Server {
@@ -42,21 +39,6 @@ public class Server {
 	private void quit() {
 		port69.close();
 		System.exit(0);
-	}
-	
-	/**
-	 * Prints out the data buffer from pkt as bytes and as a String.
-	 * @param pkt
-	 */
-	private void printData(DatagramPacket pkt) {
-		try {
-			System.out.write(pkt.getData());
-			System.out.println();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		
-		System.out.println(new String(pkt.getData()));
 	}
 	
 	/**
@@ -248,6 +230,7 @@ public class Server {
 			byte[] response = new byte[4];
 			byte[] block = {0x00, 0x00};
 			
+			// Build and send the request response.
 			response[0] = 0x00;
 			response[1] = 0x04;
 			System.arraycopy(block, 0, response, 2, 2);
@@ -255,14 +238,23 @@ public class Server {
 			
 			sPkt = new DatagramPacket(response, response.length, target, port);
 			send(sPkt);
-			System.out.println("Here");
 
+			/*
+			 * While the packet length is 516 bytes (4 byte header, 512 bytes data):
+			 *    - Receive the next data packet.
+			 *    - Increment the block number.
+			 *    - Separate the data from the header.
+			 *    - Write the data to the file.
+			 *    - Build and send the response.
+			 */
 			do {
 				receive();
 				System.out.println(new String(rPkt.getData()));
 				if (++block[1] == 0) block[0]++;
+				
 				data = new byte[rPkt.getLength() - 4];
 				System.arraycopy(rPkt.getData(), 4, data, 0, rPkt.getLength() - 4);
+				
 				out.write(data, 0, data.length);
 				out.flush();
 				
@@ -284,23 +276,27 @@ public class Server {
 		private void read() throws IOException {
 			int sizeRead;
 			byte[] response;
-			byte[] block = {0x00, 0x01};
-			byte[] opcode = {0x00, 0x03};
+			byte[] block = {0x00, 0x00};
 			byte[] data = new byte[512];
+			
 			BufferedInputStream in = new BufferedInputStream(new FileInputStream(filename));
 			
 			sizeRead = in.read(data);
 			
 			while (sizeRead != -1) {
 				if (++block[1] == 0) block[0]++;
+				
 				response = new byte[sizeRead + 4];
+				
 				response[0] = 0x00;
-				response[1] = 0x01;
+				response[1] = 0x03;
 				System.arraycopy(block, 0, response, 2, 2);
 				System.arraycopy(data, 0, response, 4, sizeRead);
+				
 				sPkt = new DatagramPacket(response, sizeRead + 4, target, port);
 				send(sPkt);
 				receive();
+				
 				sizeRead = in.read(data);
 			}
 			in.close();
