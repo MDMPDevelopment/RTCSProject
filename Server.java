@@ -22,7 +22,6 @@ public class Server {
 	private DatagramPacket request;
 	
 	private Boolean valid, test, verbose;
-	//private ArrayList<Transfer> transfers;
 	
 	public Server() {
 		try {
@@ -35,17 +34,11 @@ public class Server {
 		test = false;
 		
 		new UI().start();
-		
-		//transfers = new ArrayList<Transfer>();
 	}
 	
-	private void printUI() {
-		System.out.println("T - Toggle test mode");
-		System.out.println("V - Toggle verbose mode");
-		System.out.println("S - Start server");
-		System.out.println("Q - Quit");
-	}
-	
+	/**
+	 * Closes the port and exits. Outstanding transfers will run to completion.
+	 */
 	private void quit() {
 		port69.close();
 		System.exit(0);
@@ -94,19 +87,19 @@ public class Server {
 		System.out.println("Parsing");
 		Transfer transfer;
 		byte[] data = request.getData();
-		//System.out.println(new String(data));
+		
 		file = new byte[data.length];
 		mode = new byte[netascii.length()];
 		int i = 2;
 		int j = 0;
-		//System.out.println(valid);
+		
 		valid = data[0] == 0x00;
 		valid = (data[1] == 0x01 || data[1] == 0x02) && valid;
 		
 		while (data[i] != 0x00 && i < data.length) {
 			file[j++] = data[i++];
 		}
-		//System.out.println(valid);
+		
 		valid = i > 2 && i++ < data.length && valid;
 		
 		j = 0;
@@ -114,89 +107,22 @@ public class Server {
 		while (data[i] != 0x00 && i < data.length && j < netascii.length()) {
 			mode[j++] = data[i++]; 
 		}
-		//System.out.println(valid);
-		//System.out.println(new String(mode).toLowerCase());
+		
 		//valid = (new String(mode).toLowerCase().equals(netascii) || new String(mode).toLowerCase().equals(octet)) && valid;
-		//System.out.println(valid);
+		
 		valid = data[i] == 0x00 && valid;
-		//System.out.println(valid);
+		
 		if (valid) {
-			//System.out.println("Parsed");
-			//transfers.add(new Transfer(data[1] == 0x02, request, new String(file)));
 			transfer = new Transfer(data[1] == 0x02, request, new String(file));
 			transfer.start();
 		}
-		//System.out.println(valid);
 	}
 	
 	/**
-	 * Builds the response packet.
-	 * <p>
-	 * Should not be called before parsePacket().
-	 * <p>
-	 * Builds a response with a data buffer {0x00, 0x03, 0x00, 0x01} if the request was a read request.
-	 * Builds a response with a data buffer {0x00, 0x04, 0x00, 0x00} if the request was a write request.
-	 * @throws IOException
+	 * UI
+	 * @author MatthewPenner
+	 * The UI class handles user inputs. It allows the  
 	 */
-	/*public void buildResponse() throws IOException {
-		printData(rPkt);
-		
-		byte[] response;
-		byte[] data = rPkt.getData();
-		
-		if (!valid) {
-			throw new IOException();
-		}
-		
-		switch (data[1]) {
-			case 0x01: response = new byte[] {0x00, 0x03, 0x00, 0x01};
-					   break;
-			case 0x02: response = new byte[] {0x00, 0x04, 0x00, 0x00};
-					   break;
-			default: throw new IOException();
-		}
-		
-		sPkt = new DatagramPacket(response, response.length, rPkt.getAddress(), rPkt.getPort());
-	}*/
-	
-	/**
-	 * Sends the response.
-	 * <p>
-	 * Should not be called before buildResponse().
-	 */
-	/*public void send() {
-		try {
-			sndSok = new DatagramSocket();
-			sndSok.send(sPkt);
-			sndSok.close();
-		} catch (SocketException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}*/
-	
-	public void ui() throws IOException {
-		String command;
-		Scanner input = new Scanner(System.in);
-		
-		while (true) {
-			printUI();
-			command = input.nextLine();
-			
-			switch (command.toLowerCase().charAt(0)) {
-				case 'q': input.close();
-						  quit();
-						  break;
-				case 't': test = !test;
-						  break;
-				case 'v': verbose = !verbose;
-						  break;
-				case 's': return;
-			}
-		}
-	}
-	
 	private class UI extends Thread {
 		private Boolean quit;
 		
@@ -204,12 +130,19 @@ public class Server {
 			quit = false;
 		}
 		
+		/**
+		 * Prints out the user's options.
+		 */
 		private void printUI() {
 			System.out.println("T - Toggle test mode");
 			System.out.println("V - Toggle verbose mode");
 			System.out.println("Q - Quit");
 		}
 		
+		/**
+		 * Prints the options and receives the user's inputs.
+		 * @throws IOException
+		 */
 		public void ui() throws IOException {
 			String command;
 			Scanner input = new Scanner(System.in);
@@ -275,6 +208,10 @@ public class Server {
 			}
 		}
 		
+		/**
+		 * Sends the packet passed to the connected client.
+		 * @param pkt
+		 */
 		private void send(DatagramPacket pkt) {
 			try {
 				sock.send(pkt);
@@ -283,6 +220,9 @@ public class Server {
 			}
 		}
 		
+		/**
+		 * Waits to receive a packet from the connected client.
+		 */
 		public void receive() {
 			rPkt = new DatagramPacket(rData, 516);
 			try {
@@ -292,6 +232,10 @@ public class Server {
 			}
 		}
 		
+		/**
+		 * Services a write transfer.  Reads from the client over the network and writes the file locally.
+		 * @throws IOException
+		 */
 		private void write() throws IOException {
 			byte[] data;
 			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(filename));
@@ -327,6 +271,10 @@ public class Server {
 			out.close();
 		}
 		
+		/**
+		 * Services a read transfer.  Reads from local file and writes to the client over the network.
+		 * @throws IOException
+		 */
 		private void read() throws IOException {
 			int sizeRead;
 			byte[] response;
@@ -374,21 +322,10 @@ public class Server {
 	
 	public static void main(String[] args) throws IOException {
 		Server server = new Server();
-		//server.ui();
 		
 		while (true) {
 			server.receive();
 			server.parsePacket();
 		}
-		/*while (true) {
-			server.receive();
-			server.parsePacket();
-			try {
-				server.buildResponse();
-			} catch (IOException e) {
-				System.exit(-1);
-			}
-			server.send();
-		}*/
 	}
 }

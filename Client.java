@@ -87,11 +87,18 @@ public class Client {
 		}
 	}
 	
+	/**
+	 * Closes the socket and exits.
+	 */
 	private void quit() {
 		sock.close();
 		System.exit(0);
 	}
 	
+	/**
+	 * Starts a write operation. Reads from a local file and writes to the server accross the network.
+	 * @throws IOException
+	 */
 	private void startWrite() throws IOException {
 		int sizeRead;
 		byte[] block = {0x00, 0x01};
@@ -125,6 +132,10 @@ public class Client {
 		in.close();
 	}
 	
+	/**
+	 * Starts a read operation. Reads from the server and writes to a local file.
+	 * @throws IOException
+	 */
 	private void startRead() throws IOException {
 		byte[] data;
 		Boolean first = true;
@@ -161,7 +172,12 @@ public class Client {
 		out.close();
 	}
 	
-	
+	/**
+	 * Builds a byte array for a request packet.
+	 * @param file The name of the file to be read or written.
+	 * @param opcode The opcode indicating whether it is a read or write request.
+	 * @return The data buffer for the request packet.
+	 */
 	private byte[] buildRQ(String file, byte opcode) {
 		byte[] request;
 		byte[] code = {0x00, opcode};
