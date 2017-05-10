@@ -84,7 +84,6 @@ public class Server {
 	 * in any case combination.
 	 */
 	public void parsePacket() {
-		System.out.println("Parsing");
 		Transfer transfer;
 		byte[] data = request.getData();
 		
@@ -96,22 +95,26 @@ public class Server {
 		valid = data[0] == 0x00;
 		valid = (data[1] == 0x01 || data[1] == 0x02) && valid;
 		
+		// Read out the filename from the request.
 		while (data[i] != 0x00 && i < data.length) {
 			file[j++] = data[i++];
 		}
 		
+		// Valid if the filename is one or more characters long and there is data after the terminating 0x00.
 		valid = i > 2 && i++ < data.length && valid;
 		
 		j = 0;
 		
+		// Read out the mode from the request.
 		while (data[i] != 0x00 && i < data.length && j < netascii.length()) {
 			mode[j++] = data[i++]; 
 		}
 		
-		//valid = (new String(mode).toLowerCase().equals(netascii) || new String(mode).toLowerCase().equals(octet)) && valid;
-		
+		valid = (new String(mode).trim().toLowerCase().equals(netascii) || new String(mode).trim().toLowerCase().equals(octet)) && valid;
+		System.out.println(valid);
 		valid = data[i] == 0x00 && valid;
 		
+		// If the packet is a valid request, start a new transfer.
 		if (valid) {
 			transfer = new Transfer(data[1] == 0x02, request, new String(file));
 			transfer.start();
@@ -121,7 +124,7 @@ public class Server {
 	/**
 	 * UI
 	 * @author MatthewPenner
-	 * The UI class handles user inputs. It allows the  
+	 * The UI class handles user inputs. It allows the user input to be read during transfers.
 	 */
 	private class UI extends Thread {
 		private Boolean quit;
@@ -238,7 +241,10 @@ public class Server {
 		 */
 		private void write() throws IOException {
 			byte[] data;
+			
+			// Opens the file to write.
 			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(filename));
+			
 			byte[] response = new byte[4];
 			byte[] block = {0x00, 0x00};
 			

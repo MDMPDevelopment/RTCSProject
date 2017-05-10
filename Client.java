@@ -33,17 +33,8 @@ public class Client {
 		verbose = false;
 		
 		sock = new DatagramSocket();
-	}
-	
-	/**
-	 * Displays the user options.
-	 */
-	private void printUI() {
-		System.out.println("T - Toggle test mode");
-		System.out.println("V - Toggle verbose mode");
-		System.out.println("W - Initiate file write");
-		System.out.println("R - Initiate file read");
-		System.out.println("Q - Quit");
+		
+		new UI().start();
 	}
 	
 	/**
@@ -101,32 +92,53 @@ public class Client {
 	 */
 	private void startWrite() throws IOException {
 		int sizeRead;
-		byte[] block = {0x00, 0x01};
-		byte[] opcode = {0x00, 0x03};
+		
 		String file = pickFile();
+		
+		// Holds the block number. Since this is a write operation, the lowest block number the client uses is 01.
+		byte[] block = {0x00, 0x01};
+		// Holds the opcode.  This never changes, and is here for convenience (can be copied in with arraycopy).
+		byte[] opcode = {0x00, 0x03};
 		byte[] request = buildRQ(file, writeReq);
 		byte[] data = new byte[512];
+		
+		// Opens the file selected for reading.
 		BufferedInputStream in = new BufferedInputStream(new FileInputStream("Client/" + file));
 		
+		// Build the WRQ packet from the request array.
 		sndPkt = new DatagramPacket(request, request.length, target, 69);
 		send();
 		receive();
+		
+		// Set the destination port and address based on the request response.
 		port = rcvPkt.getPort();
 		target = rcvPkt.getAddress();
 		
+		// Read in up to 512 bytes of data.
 		sizeRead = in.read(data);
 		
+		/*
+		 * While the end of the file hasn't been reached:
+		 *   - Copy the opcode, block number, and data into a single array.
+		 *   - Put the array into a datagram packet.
+		 *   - Send the packet and wait for a response.
+		 *   - Increment the block number.
+		 *   - Read in a new set of data.
+		 */
 		while (sizeRead != -1) {
 			request = new byte[4 + sizeRead];
+			
 			System.arraycopy(opcode, 0, request, 0, 2);
 			System.arraycopy(block, 0, request, 2, 2);
 			System.arraycopy(data, 0, request, 4, sizeRead);
+			
 			sndPkt = new DatagramPacket(request, request.length, target, port);
-			System.out.println(sndPkt.getLength());
+			
 			send();
 			receive();
 			
 			if (++block[1] == 0) block[0]++;
+			
 			sizeRead = in.read(data);
 		}
 		in.close();
@@ -138,35 +150,57 @@ public class Client {
 	 */
 	private void startRead() throws IOException {
 		byte[] data;
+		
 		Boolean first = true;
+		
+		// Prompt the user to select a file to read, then open and/or create the file to write to.
 		String file = pickFile();
 		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream("Client/" + file));
 
+		// Build the data buffer for the RRQ.
 		byte[] request = buildRQ(file, readReq);
+		
+		// Hold the block number and opcode.  The block number starts at zero to simplify the increment logic.
 		byte[] block = {0x00, 0x00};
 		byte[] opcode = {0x00, 0x04};
 		
+		// Build the RRQ packet from the request array, send the request, then wait for a response.
 		sndPkt = new DatagramPacket(request, request.length, target, 69);
 		send();
 		receive();
+		
+		// Set the destination port and address based on the request response.
+		target = rcvPkt.getAddress();
 		port = rcvPkt.getPort();
 		
+		/*
+		 * While the packet received is 516 bytes (4 byte header plus 512 bytes data):
+		 *   - Receive a packet.
+		 *   - Increment the block number.
+		 *   - Separate the data from the header.
+		 *   - Write the data to the file.
+		 *   - Send the response.
+		 */
 		do {
+			// Used to prevent a double receive() on the first block. 
 			if (first) {
 				first = false;
 			} else receive();
+			
 			if (++block[1] == 0) block[0]++;
+			
 			data = new byte[rcvPkt.getLength() - 4];
 			System.arraycopy(rcvPkt.getData(), 4, data, 0, data.length);
 			out.write(data, 0, data.length);
 			out.flush();
-			System.out.println("here");
+			
 			request = new byte[4];
 			System.arraycopy(opcode, 0, request, 0, 2);
 			System.arraycopy(block, 0, request, 2, 2);
 			
 			sndPkt = new DatagramPacket(request, request.length, target, port);
 			send();
+			
 			if (rcvPkt.getData().length < 516) break;
 		} while (rcvPkt.getData().length > 515);
 		out.close();
@@ -186,7 +220,7 @@ public class Client {
 		System.arraycopy(code, 0, request, 0, 2);		
 		System.arraycopy(file.getBytes(), 0, request, 2, file.length());
 		request[file.length() + 2] = 0x00;
-		//System.out.println(new String(request));
+		
 		System.arraycopy(mode.getBytes(), 0, request, file.length() + 3, mode.length());
 		request[request.length - 1] = 0x00;
 		
@@ -194,35 +228,67 @@ public class Client {
 	}
 	
 	/**
-	 * 
-	 * @throws IOException
+	 * UI
+	 * @author MatthewPenner
+	 * The UI class handles user inputs. It allows the user input to be read during transfers.
 	 */
-	public void ui() throws IOException {
-		String command;
-		Scanner input = new Scanner(System.in);
+	private class UI extends Thread {
+		private Boolean quit;
 		
-		while (true) {
-			printUI();
-			command = input.nextLine();
+		public UI () {
+			quit = false;
+		}
+		
+		/**
+		 * Prints out the user's options.
+		 */
+		private void printUI() {
+			System.out.println("T - Toggle test mode");
+			System.out.println("V - Toggle verbose mode");
+			System.out.println("W - Initiate file write");
+			System.out.println("R - Initiate file read");
+			System.out.println("Q - Quit");
+		}
+		
+		/**
+		 * Prints the options and receives the user's inputs.
+		 * @throws IOException
+		 */
+		public void ui() throws IOException {
+			String command;
+			Scanner input = new Scanner(System.in);
 			
-			switch (command.toLowerCase().charAt(0)) {
-				case 'q': input.close();
-						  quit();
-						  break;
-				case 't': test = !test;
-						  break;
-				case 'v': verbose = !verbose;
-						  break;
-				case 'w': startWrite();
-						  break;
-				case 'r': startRead();
-						  break;
+			while (!quit) {
+				printUI();
+				command = input.nextLine();
+				
+				switch (command.toLowerCase().charAt(0)) {
+					case 'q': quit = true;
+							  input.close();
+							  quit();
+							  break;
+					case 't': test = !test;
+							  break;
+					case 'v': verbose = !verbose;
+							  break;
+					case 'w': startWrite();
+					  		  break;
+					case 'r': startRead();
+					  		  break;
+				}
+			}
+		}
+		
+		public void run() {
+			try {
+				this.ui();
+			} catch (IOException e) {
+				e.printStackTrace();
 			}
 		}
 	}
 	
 	public static void main(String[] args) throws IOException {
 		Client client = new Client();
-		client.ui();
 	}
 }
