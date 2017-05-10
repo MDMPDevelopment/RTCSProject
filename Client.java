@@ -98,7 +98,7 @@ public class Client {
 		byte[] data = new byte[512];
 		BufferedInputStream in = new BufferedInputStream(new FileInputStream("Client/" + file));
 		
-		sndPkt = new DatagramPacket(request, request.length, target, 23);
+		sndPkt = new DatagramPacket(request, request.length, target, 69);
 		send();
 		receive();
 		port = rcvPkt.getPort();

@@ -91,7 +91,7 @@ public class Server {
 	 * in any case combination.
 	 */
 	public void parsePacket() {
-		//System.out.println("Parsing");
+		System.out.println("Parsing");
 		Transfer transfer;
 		byte[] data = request.getData();
 		//System.out.println(new String(data));
@@ -240,6 +240,12 @@ public class Server {
 		}
 	}
 	
+	/**
+	 * Transfer
+	 * @author Matthew
+	 * The transfer class handles multi-threaded file transfers.  When the server receives a valid read or write request,
+	 * it creates a Transfer to service the request.
+	 */
 	private class Transfer extends Thread {
 		private Boolean type;
 		private DatagramSocket sock;
@@ -249,6 +255,12 @@ public class Server {
 		private DatagramPacket sPkt, rPkt;
 		private byte[] rData = new byte[216];
 		
+		/**
+		 * Constructor for the Transfer class
+		 * @param type If true, the transfer is a write request.  Else, it's a read request.
+		 * @param request The request which spawned the transfer.
+		 * @param filename The name of the file requested.
+		 */
 		public Transfer(Boolean type, DatagramPacket request, String filename) {
 			this.type = type;
 			this.filename = "Server/" + filename.trim();
@@ -293,9 +305,12 @@ public class Server {
 			
 			sPkt = new DatagramPacket(response, response.length, target, port);
 			send(sPkt);
-			receive();
+			System.out.println("Here");
 
 			do {
+				receive();
+				System.out.println(new String(rPkt.getData()));
+				if (++block[1] == 0) block[0]++;
 				data = new byte[rPkt.getLength() - 4];
 				System.arraycopy(rPkt.getData(), 4, data, 0, rPkt.getLength() - 4);
 				out.write(data, 0, data.length);
@@ -307,9 +322,6 @@ public class Server {
 				
 				sPkt = new DatagramPacket(response, response.length, target, port);
 				send(sPkt);
-				receive();
-				
-				if (++block[1] == 0) block[0]++;
 			} while (rPkt.getData().length > 511);
 			out.close();
 		}
@@ -325,20 +337,22 @@ public class Server {
 			sizeRead = in.read(data);
 			
 			while (sizeRead != -1) {
+				receive();
+				if (++block[1] == 0) block[0]++;
+				sizeRead = in.read(data);
 				response = new byte[516];
 				System.arraycopy(opcode, 0, response, 0, 2);
 				System.arraycopy(block, 0, response, 2, 2);
 				System.arraycopy(data, 0, response, 4, data.length);
 				sPkt = new DatagramPacket(response, sizeRead + 4, target, port);
 				send(sPkt);
-				receive();
-				
-				if (++block[1] == 0) block[0]++;
-				sizeRead = in.read(data);
 			}
 			in.close();
 		}
 		
+		/**
+		 * Starts the file transfer according to what type of request it was.
+		 */
 		public void run() {
 			if (type) {
 				try {
