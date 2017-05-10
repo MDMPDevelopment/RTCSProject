@@ -111,11 +111,11 @@ public class Host {
 	 * Should not be called before receive2().
 	 */
 	public void forwardReply() {
-		try {
+		/*try {
 			sndSok = new DatagramSocket();
 		} catch (SocketException e) {
 			e.printStackTrace();
-		}
+		}*/
 		
 		//printData(rcvPkt2);
 		
@@ -123,8 +123,7 @@ public class Host {
 		
 		//printData(sndPkt);
 		
-		send(sndPkt, sndSok);
-		sndSok.close();
+		send(sndPkt, sndRcvSok);
 	}
 	
 	public static void main(String[] args) {

@@ -297,8 +297,7 @@ public class Server {
 
 			do {
 				data = new byte[rPkt.getLength() - 4];
-				System.arraycopy(rPkt.getData(), 5, data, 0, rPkt.getLength() - 5);
-				System.out.println(new String(data));
+				System.arraycopy(rPkt.getData(), 4, data, 0, rPkt.getLength() - 4);
 				out.write(data, 0, data.length);
 				
 				response = new byte[4];
@@ -329,7 +328,7 @@ public class Server {
 				response = new byte[516];
 				System.arraycopy(opcode, 0, response, 0, 2);
 				System.arraycopy(block, 0, response, 2, 2);
-				System.arraycopy(data, 0, response, 5, data.length);
+				System.arraycopy(data, 0, response, 4, data.length);
 				sPkt = new DatagramPacket(response, sizeRead + 4, target, port);
 				send(sPkt);
 				receive();
