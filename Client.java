@@ -124,11 +124,12 @@ public class Client {
 	
 	private void startRead() throws IOException {
 		byte[] data;
+		Boolean first = true;
 		String file = pickFile();
 		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream("Client/" + file));
 
 		byte[] request = buildRQ(file, readReq);
-		byte[] block = {0x00, 0x01};
+		byte[] block = {0x00, 0x00};
 		byte[] opcode = {0x00, 0x04};
 		
 		sndPkt = new DatagramPacket(request, request.length, target, 69);
@@ -137,8 +138,13 @@ public class Client {
 		port = rcvPkt.getPort();
 		
 		do {
+			if (first) {
+				first = false;
+			} else receive();
+			if (++block[1] == 0) block[0]++;
 			data = new byte[rcvPkt.getLength() - 4];
 			System.arraycopy(rcvPkt.getData(), 3, data, 0, rcvPkt.getLength() - 4);
+			System.out.println(new String(data));
 			out.write(data, 0, data.length);
 			
 			request = new byte[4];
@@ -147,9 +153,6 @@ public class Client {
 			
 			sndPkt = new DatagramPacket(request, request.length, target, port);
 			send();
-			receive();
-			
-			if (++block[1] == 0) block[0]++;
 		} while (rcvPkt.getData().length > 511);
 		out.close();
 	}

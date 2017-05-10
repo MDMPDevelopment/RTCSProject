@@ -337,15 +337,16 @@ public class Server {
 			sizeRead = in.read(data);
 			
 			while (sizeRead != -1) {
-				receive();
 				if (++block[1] == 0) block[0]++;
-				sizeRead = in.read(data);
-				response = new byte[516];
-				System.arraycopy(opcode, 0, response, 0, 2);
+				response = new byte[sizeRead + 4];
+				response[0] = 0x00;
+				response[1] = 0x01;
 				System.arraycopy(block, 0, response, 2, 2);
-				System.arraycopy(data, 0, response, 4, data.length);
+				System.arraycopy(data, 0, response, 4, sizeRead);
 				sPkt = new DatagramPacket(response, sizeRead + 4, target, port);
 				send(sPkt);
+				receive();
+				sizeRead = in.read(data);
 			}
 			in.close();
 		}
