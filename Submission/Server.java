@@ -2,11 +2,14 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.SocketException;
+import java.util.ArrayList;
 import java.util.Scanner;
 
 public class Server {
@@ -19,6 +22,7 @@ public class Server {
 	private DatagramPacket request;
 	
 	private Boolean valid, test, verbose;
+	//private ArrayList<Transfer> transfers;
 	
 	public Server() {
 		try {
@@ -31,14 +35,35 @@ public class Server {
 		test = false;
 		
 		new UI().start();
+		
+		//transfers = new ArrayList<Transfer>();
 	}
 	
-	/**
-	 * Closes the port and exits. Outstanding transfers will run to completion.
-	 */
+	private void printUI() {
+		System.out.println("T - Toggle test mode");
+		System.out.println("V - Toggle verbose mode");
+		System.out.println("S - Start server");
+		System.out.println("Q - Quit");
+	}
+	
 	private void quit() {
 		port69.close();
 		System.exit(0);
+	}
+	
+	/**
+	 * Prints out the data buffer from pkt as bytes and as a String.
+	 * @param pkt
+	 */
+	private void printData(DatagramPacket pkt) {
+		try {
+			System.out.write(pkt.getData());
+			System.out.println();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		System.out.println(new String(pkt.getData()));
 	}
 	
 	/**
@@ -66,48 +91,112 @@ public class Server {
 	 * in any case combination.
 	 */
 	public void parsePacket() {
+		System.out.println("Parsing");
 		Transfer transfer;
 		byte[] data = request.getData();
-		
+		//System.out.println(new String(data));
 		file = new byte[data.length];
 		mode = new byte[netascii.length()];
 		int i = 2;
 		int j = 0;
-		
+		//System.out.println(valid);
 		valid = data[0] == 0x00;
 		valid = (data[1] == 0x01 || data[1] == 0x02) && valid;
 		
-		// Read out the filename from the request.
 		while (data[i] != 0x00 && i < data.length) {
 			file[j++] = data[i++];
 		}
-		
-		// Valid if the filename is one or more characters long and there is data after the terminating 0x00.
+		//System.out.println(valid);
 		valid = i > 2 && i++ < data.length && valid;
 		
 		j = 0;
 		
-		// Read out the mode from the request.
 		while (data[i] != 0x00 && i < data.length && j < netascii.length()) {
 			mode[j++] = data[i++]; 
 		}
-		
-		//valid = (new String(mode).substring(0, netascii.length()).toLowerCase().equals(netascii) || new String(mode).substring(0, octet.length()).toLowerCase().equals(octet)) && valid;
-		System.out.println(valid);
+		//System.out.println(valid);
+		//System.out.println(new String(mode).toLowerCase());
+		//valid = (new String(mode).toLowerCase().equals(netascii) || new String(mode).toLowerCase().equals(octet)) && valid;
+		//System.out.println(valid);
 		valid = data[i] == 0x00 && valid;
-		
-		// If the packet is a valid request, start a new transfer.
+		//System.out.println(valid);
 		if (valid) {
+			//System.out.println("Parsed");
+			//transfers.add(new Transfer(data[1] == 0x02, request, new String(file)));
 			transfer = new Transfer(data[1] == 0x02, request, new String(file));
 			transfer.start();
 		}
+		//System.out.println(valid);
 	}
 	
 	/**
-	 * UI
-	 * @author MatthewPenner
-	 * The UI class handles user inputs. It allows the user input to be read during transfers.
+	 * Builds the response packet.
+	 * <p>
+	 * Should not be called before parsePacket().
+	 * <p>
+	 * Builds a response with a data buffer {0x00, 0x03, 0x00, 0x01} if the request was a read request.
+	 * Builds a response with a data buffer {0x00, 0x04, 0x00, 0x00} if the request was a write request.
+	 * @throws IOException
 	 */
+	/*public void buildResponse() throws IOException {
+		printData(rPkt);
+		
+		byte[] response;
+		byte[] data = rPkt.getData();
+		
+		if (!valid) {
+			throw new IOException();
+		}
+		
+		switch (data[1]) {
+			case 0x01: response = new byte[] {0x00, 0x03, 0x00, 0x01};
+					   break;
+			case 0x02: response = new byte[] {0x00, 0x04, 0x00, 0x00};
+					   break;
+			default: throw new IOException();
+		}
+		
+		sPkt = new DatagramPacket(response, response.length, rPkt.getAddress(), rPkt.getPort());
+	}*/
+	
+	/**
+	 * Sends the response.
+	 * <p>
+	 * Should not be called before buildResponse().
+	 */
+	/*public void send() {
+		try {
+			sndSok = new DatagramSocket();
+			sndSok.send(sPkt);
+			sndSok.close();
+		} catch (SocketException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}*/
+	
+	public void ui() throws IOException {
+		String command;
+		Scanner input = new Scanner(System.in);
+		
+		while (true) {
+			printUI();
+			command = input.nextLine();
+			
+			switch (command.toLowerCase().charAt(0)) {
+				case 'q': input.close();
+						  quit();
+						  break;
+				case 't': test = !test;
+						  break;
+				case 'v': verbose = !verbose;
+						  break;
+				case 's': return;
+			}
+		}
+	}
+	
 	private class UI extends Thread {
 		private Boolean quit;
 		
@@ -115,19 +204,12 @@ public class Server {
 			quit = false;
 		}
 		
-		/**
-		 * Prints out the user's options.
-		 */
 		private void printUI() {
 			System.out.println("T - Toggle test mode");
 			System.out.println("V - Toggle verbose mode");
 			System.out.println("Q - Quit");
 		}
 		
-		/**
-		 * Prints the options and receives the user's inputs.
-		 * @throws IOException
-		 */
 		public void ui() throws IOException {
 			String command;
 			Scanner input = new Scanner(System.in);
@@ -138,6 +220,7 @@ public class Server {
 				
 				switch (command.toLowerCase().charAt(0)) {
 					case 'q': quit = true;
+							  input.close();
 							  quit();
 							  break;
 					case 't': test = !test;
@@ -192,10 +275,6 @@ public class Server {
 			}
 		}
 		
-		/**
-		 * Sends the packet passed to the connected client.
-		 * @param pkt
-		 */
 		private void send(DatagramPacket pkt) {
 			try {
 				sock.send(pkt);
@@ -204,9 +283,6 @@ public class Server {
 			}
 		}
 		
-		/**
-		 * Waits to receive a packet from the connected client.
-		 */
 		public void receive() {
 			rPkt = new DatagramPacket(rData, 516);
 			try {
@@ -216,20 +292,12 @@ public class Server {
 			}
 		}
 		
-		/**
-		 * Services a write transfer.  Reads from the client over the network and writes the file locally.
-		 * @throws IOException
-		 */
 		private void write() throws IOException {
 			byte[] data;
-			
-			// Opens the file to write.
 			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(filename));
-			
 			byte[] response = new byte[4];
 			byte[] block = {0x00, 0x00};
 			
-			// Build and send the request response.
 			response[0] = 0x00;
 			response[1] = 0x04;
 			System.arraycopy(block, 0, response, 2, 2);
@@ -237,23 +305,14 @@ public class Server {
 			
 			sPkt = new DatagramPacket(response, response.length, target, port);
 			send(sPkt);
+			System.out.println("Here");
 
-			/*
-			 * While the packet length is 516 bytes (4 byte header, 512 bytes data):
-			 *    - Receive the next data packet.
-			 *    - Increment the block number.
-			 *    - Separate the data from the header.
-			 *    - Write the data to the file.
-			 *    - Build and send the response.
-			 */
 			do {
 				receive();
-				
+				System.out.println(new String(rPkt.getData()));
 				if (++block[1] == 0) block[0]++;
-				
 				data = new byte[rPkt.getLength() - 4];
 				System.arraycopy(rPkt.getData(), 4, data, 0, rPkt.getLength() - 4);
-				
 				out.write(data, 0, data.length);
 				out.flush();
 				
@@ -264,38 +323,30 @@ public class Server {
 				
 				sPkt = new DatagramPacket(response, response.length, target, port);
 				send(sPkt);
-			} while (rPkt.getLength() > 515);
+			} while (rPkt.getData().length > 515);
 			out.close();
 		}
 		
-		/**
-		 * Services a read transfer.  Reads from local file and writes to the client over the network.
-		 * @throws IOException
-		 */
 		private void read() throws IOException {
 			int sizeRead;
 			byte[] response;
-			byte[] block = {0x00, 0x00};
+			byte[] block = {0x00, 0x01};
+			byte[] opcode = {0x00, 0x03};
 			byte[] data = new byte[512];
-			
 			BufferedInputStream in = new BufferedInputStream(new FileInputStream(filename));
 			
 			sizeRead = in.read(data);
 			
 			while (sizeRead != -1) {
 				if (++block[1] == 0) block[0]++;
-				
 				response = new byte[sizeRead + 4];
-				
 				response[0] = 0x00;
-				response[1] = 0x03;
+				response[1] = 0x01;
 				System.arraycopy(block, 0, response, 2, 2);
 				System.arraycopy(data, 0, response, 4, sizeRead);
-				
 				sPkt = new DatagramPacket(response, sizeRead + 4, target, port);
 				send(sPkt);
 				receive();
-				
 				sizeRead = in.read(data);
 			}
 			in.close();
@@ -323,10 +374,21 @@ public class Server {
 	
 	public static void main(String[] args) throws IOException {
 		Server server = new Server();
+		//server.ui();
 		
 		while (true) {
 			server.receive();
 			server.parsePacket();
 		}
+		/*while (true) {
+			server.receive();
+			server.parsePacket();
+			try {
+				server.buildResponse();
+			} catch (IOException e) {
+				System.exit(-1);
+			}
+			server.send();
+		}*/
 	}
 }
