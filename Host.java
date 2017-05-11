@@ -119,6 +119,11 @@ public class Host {
 		if (verbose) System.out.println(new String(rcvPkt1.getData()));
 	}
 	
+	/**
+	 * Receives data from the client.
+	 * <p>
+	 * Listens on TID port for data.
+	 */
 	public void receive1() {
 		rcvPkt1 = new DatagramPacket(new byte[receiveLength], receiveLength);
 
