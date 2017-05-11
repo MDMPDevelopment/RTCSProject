@@ -251,6 +251,19 @@ public class Client {
 		return request;
 	}
 	
+	private void setTarget() {
+		String ip;
+		Scanner stream = new Scanner(System.in);
+		System.out.println("Enter the target IP address: ");
+		ip = stream.nextLine();
+		
+		try {
+			target = InetAddress.getByName(ip);
+		} catch (UnknownHostException e) {
+			System.out.println("Invalid IP.");
+		}
+	}
+	
 	/**
 	 * UI
 	 * @author MatthewPenner
@@ -271,6 +284,7 @@ public class Client {
 			System.out.println("V - Toggle verbose mode");
 			System.out.println("W - Initiate file write");
 			System.out.println("R - Initiate file read");
+			System.out.println("I - Set the target IP (Default localhost)");
 			System.out.println("Q - Quit");
 			System.out.print("Test: "); System.out.print(test); System.out.print("    Verbose: "); System.out.println(verbose);
 		}
@@ -299,6 +313,8 @@ public class Client {
 					  		  break;
 					case 'r': startRead();
 					  		  break;
+					case 'i': setTarget();
+							  break;
 				}
 			}
 		}
