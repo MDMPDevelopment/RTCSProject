@@ -83,7 +83,7 @@ public class Server {
 		// Read out the filename from the request.
 		while (data[i] != 0x00 && i < data.length) {
 			file[j++] = data[i++];
-			if (verbose) System.out.print(file[j - 1]);
+			if (verbose) System.out.print((char)file[j - 1]);
 		}
 		
 		if (verbose) System.out.println();
@@ -96,7 +96,7 @@ public class Server {
 		// Read out the mode from the request.
 		while (data[i] != 0x00 && i < data.length && j < netascii.length()) {
 			mode[j++] = data[i++]; 
-			if (verbose) System.out.print(file[j - 1]);
+			if (verbose) System.out.print((char)mode[j - 1]);
 		}
 		
 		if (verbose) System.out.println();
@@ -177,7 +177,6 @@ public class Server {
 	 */
 	private class Transfer extends Thread {
 		private Boolean type;
-		private Boolean verbose;
 		private DatagramSocket sock;
 		private InetAddress target;
 		private int port;
@@ -250,6 +249,7 @@ public class Server {
 			System.arraycopy(block, 0, response, 2, 2);
 			block[1]++;
 			
+			if (verbose) System.out.println(new String(response));
 			if (verbose) System.out.println("Sending response.");
 			sPkt = new DatagramPacket(response, response.length, target, port);
 			send(sPkt);
@@ -269,6 +269,8 @@ public class Server {
 				
 				if (verbose) System.out.print("Received ");
 				if (verbose) System.out.println(new String(rPkt.getData()));
+				if (verbose) System.out.print(rPkt.getLength());
+				if (verbose) System.out.println(" bytes");
 				
 				if (++block[1] == 0) block[0]++;
 				

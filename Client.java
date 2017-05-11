@@ -144,6 +144,12 @@ public class Client {
 			System.arraycopy(block, 0, request, 2, 2);
 			System.arraycopy(data, 0, request, 4, sizeRead);
 			
+			if (verbose) {
+				System.out.print("Sending ");
+				System.out.print(new String(request));
+				System.out.print(" to ");
+				System.out.println(port);
+			}
 			sndPkt = new DatagramPacket(request, request.length, target, port);
 			
 			send();
