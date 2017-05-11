@@ -202,7 +202,7 @@ public class Host {
 			System.out.println("T - Toggle test mode");
 			System.out.println("V - Toggle verbose mode");
 			System.out.println("Q - Quit");
-			System.out.println("Press R between transfers.");
+			System.out.println("Restart this between transfers.");
 			System.out.print("Test: "); System.out.print(test); System.out.print("    Verbose: "); System.out.println(verbose);
 		}
 		
@@ -243,15 +243,13 @@ public class Host {
 	
 	public static void main(String[] args) {
 		Host host = new Host();
+		host.rcvP23();
+		
 		while (true) {
-			host.rcvP23();
-			
-			while (!host.isReset()) {
-				host.forward();
-				host.receive2();
-				host.forwardReply();
-				host.receive1();
-			}
+			host.forward();
+			host.receive2();
+			host.forwardReply();
+			host.receive1();
 		}
 	}
 }
