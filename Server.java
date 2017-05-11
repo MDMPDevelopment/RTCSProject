@@ -67,6 +67,9 @@ public class Server {
 	 */
 	public void parsePacket() {
 		Transfer transfer;
+		
+		if (verbose) System.out.println("Parsing packet.");
+		
 		byte[] data = request.getData();
 		
 		file = new byte[data.length];
@@ -80,7 +83,10 @@ public class Server {
 		// Read out the filename from the request.
 		while (data[i] != 0x00 && i < data.length) {
 			file[j++] = data[i++];
+			if (verbose) System.out.print(file[j - 1]);
 		}
+		
+		if (verbose) System.out.println();
 		
 		// Valid if the filename is one or more characters long and there is data after the terminating 0x00.
 		valid = i > 2 && i++ < data.length && valid;
@@ -90,16 +96,21 @@ public class Server {
 		// Read out the mode from the request.
 		while (data[i] != 0x00 && i < data.length && j < netascii.length()) {
 			mode[j++] = data[i++]; 
+			if (verbose) System.out.print(file[j - 1]);
 		}
 		
+		if (verbose) System.out.println();
+		
 		//valid = (new String(mode).substring(0, netascii.length()).toLowerCase().equals(netascii) || new String(mode).substring(0, octet.length()).toLowerCase().equals(octet)) && valid;
-		System.out.println(valid);
 		valid = data[i] == 0x00 && valid;
 		
 		// If the packet is a valid request, start a new transfer.
 		if (valid) {
+			if (verbose) System.out.println("Valid request.  Starting transfer.");
 			transfer = new Transfer(data[1] == 0x02, request, new String(file));
 			transfer.start();
+		} else {
+			if (verbose) System.out.println("Invalid request.");
 		}
 	}
 	
@@ -122,6 +133,7 @@ public class Server {
 			System.out.println("T - Toggle test mode");
 			System.out.println("V - Toggle verbose mode");
 			System.out.println("Q - Quit");
+			System.out.print("Test: "); System.out.print(test); System.out.print("    Verbose: "); System.out.println(verbose);
 		}
 		
 		/**
@@ -165,6 +177,7 @@ public class Server {
 	 */
 	private class Transfer extends Thread {
 		private Boolean type;
+		private Boolean verbose;
 		private DatagramSocket sock;
 		private InetAddress target;
 		private int port;
@@ -177,6 +190,7 @@ public class Server {
 		 * @param type If true, the transfer is a write request.  Else, it's a read request.
 		 * @param request The request which spawned the transfer.
 		 * @param filename The name of the file requested.
+		 * @param verbose Indicates whether this transfer is in verbose mode.
 		 */
 		public Transfer(Boolean type, DatagramPacket request, String filename) {
 			this.type = type;
@@ -224,6 +238,7 @@ public class Server {
 			byte[] data;
 			
 			// Opens the file to write.
+			if (verbose) System.out.println("Opening file.");
 			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(filename));
 			
 			byte[] response = new byte[4];
@@ -235,8 +250,11 @@ public class Server {
 			System.arraycopy(block, 0, response, 2, 2);
 			block[1]++;
 			
+			if (verbose) System.out.println("Sending response.");
 			sPkt = new DatagramPacket(response, response.length, target, port);
 			send(sPkt);
+			
+			if (verbose) System.out.println("Starting write.");
 
 			/*
 			 * While the packet length is 516 bytes (4 byte header, 512 bytes data):
@@ -249,11 +267,16 @@ public class Server {
 			do {
 				receive();
 				
+				if (verbose) System.out.print("Received ");
+				if (verbose) System.out.println(new String(rPkt.getData()));
+				
 				if (++block[1] == 0) block[0]++;
 				
 				data = new byte[rPkt.getLength() - 4];
 				System.arraycopy(rPkt.getData(), 4, data, 0, rPkt.getLength() - 4);
 				
+				if (verbose) System.out.print("Output ");
+				if (verbose) System.out.println(new String(data));
 				out.write(data, 0, data.length);
 				out.flush();
 				
@@ -266,6 +289,7 @@ public class Server {
 				send(sPkt);
 			} while (rPkt.getLength() > 515);
 			out.close();
+			if (verbose) System.out.println("Finished write.");
 		}
 		
 		/**
@@ -278,12 +302,17 @@ public class Server {
 			byte[] block = {0x00, 0x00};
 			byte[] data = new byte[512];
 			
+			if (verbose) System.out.println("Opening file.");
 			BufferedInputStream in = new BufferedInputStream(new FileInputStream(filename));
 			
 			sizeRead = in.read(data);
 			
+			if (verbose) System.out.println("Starting read.");
 			while (sizeRead != -1) {
 				if (++block[1] == 0) block[0]++;
+				
+				if (verbose) System.out.print("Read ");
+				if (verbose) System.out.println(new String(data));
 				
 				response = new byte[sizeRead + 4];
 				
@@ -292,6 +321,9 @@ public class Server {
 				System.arraycopy(block, 0, response, 2, 2);
 				System.arraycopy(data, 0, response, 4, sizeRead);
 				
+				if (verbose) System.out.print("Sent ");
+				if (verbose) System.out.println(new String(response));
+				
 				sPkt = new DatagramPacket(response, sizeRead + 4, target, port);
 				send(sPkt);
 				receive();
@@ -299,6 +331,7 @@ public class Server {
 				sizeRead = in.read(data);
 			}
 			in.close();
+			if (verbose) System.out.println("Finished read.");
 		}
 		
 		/**
