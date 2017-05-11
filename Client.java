@@ -102,10 +102,12 @@ public class Client {
 		byte[] data = new byte[512];
 		
 		// Opens the file selected for reading.
+		if (verbose) System.out.println("Opening file.");
 		BufferedInputStream in = new BufferedInputStream(new FileInputStream("Client/" + file));
 		
 		// Build the WRQ packet from the request array.
-		sndPkt = new DatagramPacket(request, request.length, target, 69);
+		if (verbose) System.out.println("Sending request.");
+		sndPkt = new DatagramPacket(request, request.length, target, test ? 23 : 69);
 		send();
 		receive();
 		
@@ -113,8 +115,17 @@ public class Client {
 		port = rcvPkt.getPort();
 		target = rcvPkt.getAddress();
 		
+		if (verbose) {
+			System.out.print("Response received from ");
+			System.out.print(target.getHostAddress());
+			System.out.print(" on port ");
+			System.out.println(port);
+		}
+		
 		// Read in up to 512 bytes of data.
 		sizeRead = in.read(data);
+		
+		if (verbose) System.out.println("Starting write.");
 		
 		/*
 		 * While the end of the file hasn't been reached:
@@ -126,6 +137,8 @@ public class Client {
 		 */
 		while (sizeRead != -1) {
 			request = new byte[4 + sizeRead];
+			
+			if (verbose) System.out.println(new String(rcvPkt.getData()));
 			
 			System.arraycopy(opcode, 0, request, 0, 2);
 			System.arraycopy(block, 0, request, 2, 2);
@@ -141,6 +154,7 @@ public class Client {
 			sizeRead = in.read(data);
 		}
 		in.close();
+		if (verbose) System.out.println("Finished write.");
 	}
 	
 	/**
@@ -154,6 +168,7 @@ public class Client {
 		
 		// Prompt the user to select a file to read, then open and/or create the file to write to.
 		String file = pickFile();
+		if (verbose) System.out.println("Opening file.");
 		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream("Client/" + file));
 
 		// Build the data buffer for the RRQ.
@@ -164,13 +179,22 @@ public class Client {
 		byte[] opcode = {0x00, 0x04};
 		
 		// Build the RRQ packet from the request array, send the request, then wait for a response.
-		sndPkt = new DatagramPacket(request, request.length, target, 69);
+		if (verbose) System.out.println("Sending request.");
+		sndPkt = new DatagramPacket(request, request.length, target, test ? 23 : 69);
 		send();
 		receive();
 		
 		// Set the destination port and address based on the request response.
 		target = rcvPkt.getAddress();
 		port = rcvPkt.getPort();
+		
+		if (verbose) {
+			System.out.print("Response received from ");
+			System.out.print(target.getHostAddress());
+			System.out.print(" on port ");
+			System.out.println(port);
+			System.out.println("Starting read.");
+		}
 		
 		/*
 		 * While the packet received is 516 bytes (4 byte header plus 512 bytes data):
@@ -186,6 +210,8 @@ public class Client {
 				first = false;
 			} else receive();
 
+			if (verbose) System.out.println(new String(rcvPkt.getData()));
+			
 			if (++block[1] == 0) block[0]++;
 			
 			data = new byte[rcvPkt.getLength() - 4];
@@ -201,6 +227,7 @@ public class Client {
 			send();
 		} while (rcvPkt.getLength() > 515);
 		out.close();
+		System.out.println("Finished read.");
 	}
 	
 	/**
@@ -245,6 +272,7 @@ public class Client {
 			System.out.println("W - Initiate file write");
 			System.out.println("R - Initiate file read");
 			System.out.println("Q - Quit");
+			System.out.print("Test: "); System.out.print(test); System.out.print("    Verbose: "); System.out.println(verbose);
 		}
 		
 		/**
