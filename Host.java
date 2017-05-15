@@ -116,6 +116,7 @@ public class Host {
 		port23.close();
 		sndSok.close();
 		sndRcvSok.close();
+		if (verbose) System.out.println("Exit succesful.");
 		System.exit(0);
 	}
 	
@@ -153,8 +154,12 @@ public class Host {
 			rcvPkt1.setData(data);
 			errorReq = CHANGELENGTH;
 		}
-		if (verbose) System.out.print("Client ");
-		if (verbose) System.out.println(new String(rcvPkt1.getData()));
+		if (verbose) {
+			System.out.println("Client ");
+			System.out.print("Opcode ");
+			System.out.println(new Integer(rcvPkt1.getData()[1]));
+			System.out.println(new String(rcvPkt1.getData()));
+		}
 	}
 	
 	/**
@@ -170,8 +175,12 @@ public class Host {
 		
 		receive(rcvPkt1, sndSok);
 
-		if (verbose) System.out.print("Client ");
-		if (verbose) System.out.println(new String(rcvPkt1.getData()));
+		if (verbose) {
+			System.out.println("Client ");
+			System.out.print("Opcode ");
+			System.out.println(new Integer(rcvPkt1.getData()[1]));
+			System.out.println(new String(rcvPkt1.getData()));
+		}
 	}
 	
 	/**
@@ -186,8 +195,12 @@ public class Host {
 		if (verbose) System.out.println(sndRcvSok.getLocalPort());
 		
 		receive(rcvPkt2, sndRcvSok);
-		if (verbose) System.out.print("Server ");
-		if (verbose) System.out.println(new String(rcvPkt2.getData()));
+		if (verbose) {
+			System.out.println("Server ");
+			System.out.print("Opcode");
+			System.out.println(new Integer(rcvPkt2.getData()[1]));
+			System.out.println(new String(rcvPkt2.getData()));
+		}
 	}
 	
 	/**
@@ -196,15 +209,12 @@ public class Host {
 	 * Should not be called before receive1().
 	 */
 	public void forward() {
-		//printData(rcvPkt1);
 		DatagramSocket errorSocket;
 		
 		sndPkt = new DatagramPacket(rcvPkt1.getData(), rcvPkt1.getLength(), target1, targetPort);
 		// Save the client IP and port to send the server's response.
 		target2 = rcvPkt1.getAddress();
 		returnPort = rcvPkt1.getPort();
-		
-		//printData(sndPkt);
 		
 		if (errorReq == CHANGETIDCLIENT) {
 			try {
