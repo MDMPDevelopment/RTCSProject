@@ -18,7 +18,10 @@ public class Host {
 	private Boolean verbose;
 	private Boolean transfer;
 	private Boolean reset;
-	
+	private int errorReq;
+	private static final int NORMAL =0;
+	private static final int CHANGEOPCODE = 1;
+	private static final int CHANGELENGTH = 2;
 	public Host() {
 		try {
 			port23 = new DatagramSocket(23);
@@ -52,7 +55,30 @@ public class Host {
 			e.printStackTrace();
 		}
 	}
-	
+	/** Changes the opcode of the received packet to 15
+	 * @param pkt
+	 */
+	private byte[] changeOpcode(DatagramPacket pkt)
+	{
+		byte[] data = pkt.getData();
+		data[0] = 1;
+			data[1] = 5;	
+		return data;
+		
+	}
+	/**
+	 * Changes the length of the packet to 530 bytes
+	 */
+	private byte[] changeLength(DatagramPacket pkt)
+	{
+		byte[] data = new byte[530];
+		for (int i = 0; i<pkt.getLength(); i++)
+		{
+			data[i]= pkt.getData()[i];
+		}
+		return data;
+		
+	}
 	/**
 	 * Sends data from the given packet through the given socket.
 	 * @param pkt
@@ -114,7 +140,17 @@ public class Host {
 		if (verbose) System.out.println(port23.getLocalPort());
 		
 		receive(rcvPkt1, port23);
-		
+		if (errorReq ==CHANGEOPCODE)
+		{
+			byte [] data = changeOpcode(rcvPkt1);
+			rcvPkt1.setData(data);
+			errorReq=NORMAL;
+		}else if(errorReq == CHANGELENGTH)
+		{
+			byte [] data = changeLength(rcvPkt1);
+			rcvPkt1.setData(data);
+			errorReq = CHANGELENGTH;
+		}
 		if (verbose) System.out.print("Client ");
 		if (verbose) System.out.println(new String(rcvPkt1.getData()));
 	}
@@ -201,6 +237,7 @@ public class Host {
 		private void printUI() {
 			System.out.println("T - Toggle test mode");
 			System.out.println("V - Toggle verbose mode");
+			System.out.println("E - View error simulator options");
 			System.out.println("Q - Quit");
 			System.out.println("Restart this between transfers.");
 			System.out.print("Test: "); System.out.print(test); System.out.print("    Verbose: "); System.out.println(verbose);
@@ -228,10 +265,20 @@ public class Host {
 							  break;
 					case 'r': reset = true;
 							  break;
+					case 'e' : listErrors();
+							  break;
+					case '1' :	 errorReq = CHANGEOPCODE;
+							  break;
+					case '2' : errorReq = CHANGELENGTH;
+							  break;
 				}
 			}
 		}
-		
+		public void listErrors(){
+			System.out.println("1 - Change Opcode");
+			System.out.println("2 - Change length");
+			System.out.println("3 - Change Transfer ID");
+		}
 		public void run() {
 			try {
 				this.ui();
@@ -252,4 +299,3 @@ public class Host {
 			host.receive1();
 		}
 	}
-}
