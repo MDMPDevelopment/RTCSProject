@@ -54,7 +54,24 @@ public class Server {
 			e.printStackTrace();
 		}
 	}
-	
+	/**
+	 * 
+	 **/
+	public byte[] createErrorMsg(byte type, byte[] errorMsg)
+	{
+		byte msg[] = new byte[errorMsg.length + 5];
+		
+		msg[0] = (byte)0;
+		msg[1] = (byte)5;
+		msg[2] = (byte)0;
+		msg[3] = type;
+		
+		System.arraycopy(errorMsg, 0, msg, 4, errorMsg.length);
+		
+		msg[msg.length - 1] = (byte)0;
+				
+		return msg;
+	}
 	/**
 	 * Parses received packets to ensure that they are valid.
 	 * <p>
@@ -110,7 +127,24 @@ public class Server {
 			transfer = new Transfer(data[1] == 0x02, request, new String(file));
 			transfer.start();
 		} else {
-			if (verbose) System.out.println("Invalid request.");
+			byte [] emsg = "Error 4: Illegal TFTP operation".getBytes();
+			System.out.println("Error 4: Illegal TFTP operation");
+			DatagramSocket sock;
+			try {
+				sock = new DatagramSocket();
+				sock.send(new DatagramPacket(createErrorMsg((byte)4, emsg), 5 + emsg.length, request.getAddress(), request.getPort()));	//send error
+				sock.close();
+			} catch (SocketException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+		
+	
+			return;
 		}
 	}
 	
