@@ -8,6 +8,11 @@ import java.net.SocketException;
 
 public class Host {
 	private static final int receiveLength = 516;
+	private static final int NORMAL =0;
+	private static final int CHANGEOPCODE = 1;
+	private static final int CHANGELENGTH = 2;
+	private static final int CHANGETIDSERVER = 3;
+	private static final int CHANGETIDCLIENT = 4;
 	
 	private DatagramSocket port23, sndRcvSok, sndSok;
 	private DatagramPacket rcvPkt1, rcvPkt2, sndPkt;
@@ -19,9 +24,6 @@ public class Host {
 	private Boolean transfer;
 	private Boolean reset;
 	private int errorReq;
-	private static final int NORMAL =0;
-	private static final int CHANGEOPCODE = 1;
-	private static final int CHANGELENGTH = 2;
 	public Host() {
 		try {
 			port23 = new DatagramSocket(23);
@@ -271,6 +273,10 @@ public class Host {
 							  break;
 					case '2' : errorReq = CHANGELENGTH;
 							  break;
+					case '3': errorReq = CHANGETIDSERVER;
+							  break;
+					case '4': errorReq = CHANGETIDCLIENT;
+							  break;
 				}
 			}
 		}
@@ -299,3 +305,4 @@ public class Host {
 			host.receive1();
 		}
 	}
+}
