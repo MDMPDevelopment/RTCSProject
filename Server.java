@@ -1,3 +1,4 @@
+package project;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.io.BufferedInputStream;
@@ -19,7 +20,7 @@ public class Server {
 	private DatagramPacket request;
 	
 	private Boolean valid, test, verbose;
-	
+	private int TID;
 	public Server() {
 		try {
 			port69 = new DatagramSocket(69);
@@ -50,6 +51,7 @@ public class Server {
 		request = new DatagramPacket(new byte[516], 516);
 		try {
 			port69.receive(request);
+			TID = request.getPort();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -88,19 +90,18 @@ public class Server {
 		if (verbose) System.out.println("Parsing packet.");
 		
 		byte[] data = request.getData();
-		
 		if (verbose) {
-			System.out.print("Opcode ");
-			System.out.println(new Integer(data[1]));
-			System.out.println();
-		}
-		
+			 			System.out.print("Opcode ");
+			 			System.out.println(new Integer(data[1]));
+			 			System.out.println();
+			 		}
+		valid = (data.length <= 516);
 		file = new byte[data.length];
 		mode = new byte[netascii.length()];
 		int i = 2;
 		int j = 0;
 		
-		valid = data[0] == 0x00;
+		valid = data[0] == 0x00 && valid;
 		valid = (data[1] == 0x01 || data[1] == 0x02) && valid;
 		
 		// Read out the filename from the request.
@@ -130,8 +131,10 @@ public class Server {
 		// If the packet is a valid request, start a new transfer.
 		if (valid) {
 			if (verbose) System.out.println("Valid request.  Starting transfer.");
-			transfer = new Transfer(data[1] == 0x02, request, new String(file));
-			transfer.start();
+			
+				transfer = new Transfer(data[1] == 0x02, request, new String(file));
+				transfer.start();
+			
 		} else {
 			byte [] emsg = "Error 4: Illegal TFTP operation".getBytes();
 			if (verbose) System.out.println("Error 4: Illegal TFTP operation");
@@ -307,15 +310,33 @@ public class Server {
 			do {
 				receive();
 				
-				if (verbose) {
-					System.out.print("Received ");
-					System.out.println(new String(rPkt.getData()));
-					System.out.print(rPkt.getLength());
-					System.out.println(" bytes");
-					System.out.print("Opcode ");
-					System.out.println(new Integer(rPkt.getData()[1]));
-					System.out.println();
+				/*if(rPkt.getData()[1]==5)
+				{
+					if (rPkt.getData()[3]==5)
+					{
+						System.out.println("Error sending packets, attempting to retransfer");
+						send(sPkt);
+						receive();
+					}
+					
 				}
+				if (rPkt.getPort() != TID)
+				{
+					System.out.println("Invalid TID, asking for retransfer");
+					byte [] errorData =createErrorMsg((byte) 5, "Invalid TID".getBytes());
+					sPkt  = new DatagramPacket (errorData, errorData.length, target, port);
+					send(sPkt);
+					receive();
+				}*/
+				if (verbose) {
+					 					System.out.print("Received ");
+					 					System.out.println(new String(rPkt.getData()));
+					 					System.out.print(rPkt.getLength());
+					 					System.out.println(" bytes");
+					 					System.out.print("Opcode ");
+					 					System.out.println(new Integer(rPkt.getData()[1]));
+					 					System.out.println();
+					 				}
 				
 				if (++block[1] == 0) block[0]++;
 				
@@ -323,11 +344,10 @@ public class Server {
 				System.arraycopy(rPkt.getData(), 4, data, 0, rPkt.getLength() - 4);
 				
 				if (verbose) {
-					System.out.print("Output ");
-					System.out.println(new String(data));
-					System.out.println();
-				}
-				
+					 					System.out.print("Output ");
+										System.out.println(new String(data));
+					 					System.out.println();
+					 				}
 				out.write(data, 0, data.length);
 				out.flush();
 				
@@ -373,25 +393,41 @@ public class Server {
 				System.arraycopy(data, 0, response, 4, sizeRead);
 				
 				if (verbose) {
-					System.out.print("Sent ");
-					System.out.println(new String(response));
-					System.out.print("Opcode ");
-					System.out.println(new Integer(response[1]));
-					System.out.println();
-				}
-
+					 					System.out.print("Sent ");
+					 				System.out.println(new String(response));
+					 					System.out.print("Opcode ");
+					 					System.out.println(new Integer(response[1]));
+					 					System.out.println();
+					 				}
+				
 				sPkt = new DatagramPacket(response, sizeRead + 4, target, port);
 				send(sPkt);
 				receive();
-				
 				if (verbose) {
-					System.out.print("Received ");
-					System.out.println(new String(rPkt.getData()));
-					System.out.print("Opcode ");
-					System.out.println(new Integer(rPkt.getData()[1]));
-					System.out.println();
+					 					System.out.print("Received ");
+					 				System.out.println(new String(rPkt.getData()));
+					 					System.out.print("Opcode ");
+					 					System.out.println(new Integer(rPkt.getData()[1]));
+					 					System.out.println();
+					 				}
+				if(rPkt.getData()[1]==5)
+				{
+					if (rPkt.getData()[3]==5)
+					{
+						System.out.println("Error sending packets, attempting to retransfer");
+						send(sPkt);
+						receive();
+					}
+					
 				}
-				
+				if (rPkt.getPort() != TID)
+				{
+					System.out.println("Invalid TID, asking for retransfer");
+					byte [] errorData =createErrorMsg((byte) 5, "Invalid TID".getBytes());
+					sPkt  = new DatagramPacket (errorData, errorData.length, target, port);
+					send(sPkt);
+					receive();
+				}
 				sizeRead = in.read(data);
 			}
 			in.close();

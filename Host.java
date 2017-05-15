@@ -1,3 +1,5 @@
+package project;
+
 import java.net.DatagramSocket;
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -13,7 +15,7 @@ public class Host {
 	private static final int CHANGELENGTH = 2;
 	private static final int CHANGETIDSERVER = 3;
 	private static final int CHANGETIDCLIENT = 4;
-	
+	Boolean first = true;
 	private DatagramSocket port23, sndRcvSok, sndSok;
 	private DatagramPacket rcvPkt1, rcvPkt2, sndPkt;
 	private InetAddress target1, target2;
@@ -72,20 +74,22 @@ public class Host {
 	 * Changes the length of the packet to 530 bytes
 	 */
 	private byte[] changeLength(DatagramPacket pkt)
-	{
-		int i = 0;
-		byte[] data = new byte[530];
+  	{
+ 		int i = 0;
+  		byte[] data = new byte[530];
 
-		while (i < pkt.getLength())
-		{
-			data[i]= pkt.getData()[i++];
-		}
-		
-		while (i < 530) data[i++] = 0x05;
-		
-		return data;
-		
-	}
+ 
+ 		while (i < pkt.getLength())
+  		{
+
+ 			data[i]= pkt.getData()[i++];
+  		}
+ 		
+ 		while (i < 530) data[i++] = 0x05;
+ 		
+  		return data;
+  		
+  	}
 	/**
 	 * Sends data from the given packet through the given socket.
 	 * @param pkt
@@ -118,15 +122,16 @@ public class Host {
 	 * Closes the sockets and exits.
 	 */
 	private void quit() {
-		if (verbose) System.out.println("Closing port 23");
-		port23.close();
-		if (verbose) System.out.println("Closing sndSok");
-		sndSok.close();
-		if (verbose) System.out.println("Closing sndRcvSok");
-		sndRcvSok.close();
-		System.out.println("Exit succesful.");
-		System.exit(0);
-	}
+		 		if (verbose) System.out.println("Closing port 23");
+		  		port23.close();
+		 		if (verbose) System.out.println("Closing sndSok");
+		  		sndSok.close();
+		 		if (verbose) System.out.println("Closing sndRcvSok");
+		  		sndRcvSok.close();
+		
+		 		System.out.println("Exit succesful.");
+		  		System.exit(0);
+		  	}
 	
 	private void getTest() {
 		
@@ -163,11 +168,11 @@ public class Host {
 			errorReq = CHANGELENGTH;
 		}
 		if (verbose) {
-			System.out.println("Client ");
-			System.out.print("Opcode ");
-			System.out.println(new Integer(rcvPkt1.getData()[1]));
-			System.out.println(new String(rcvPkt1.getData()));
-		}
+			 System.out.println("Client ");
+			 System.out.print("Opcode ");
+			 System.out.println(new Integer(rcvPkt1.getData()[1]));
+			 System.out.println(new String(rcvPkt1.getData()));
+			 		}
 	}
 	
 	/**
@@ -184,11 +189,11 @@ public class Host {
 		receive(rcvPkt1, sndSok);
 
 		if (verbose) {
-			System.out.println("Client ");
-			System.out.print("Opcode ");
-			System.out.println(new Integer(rcvPkt1.getData()[1]));
-			System.out.println(new String(rcvPkt1.getData()));
-		}
+			 			System.out.println("Client ");
+			 			System.out.print("Opcode ");
+			 			System.out.println(new Integer(rcvPkt1.getData()[1]));
+			 		System.out.println(new String(rcvPkt1.getData()));
+			 		}
 	}
 	
 	/**
@@ -204,11 +209,11 @@ public class Host {
 		
 		receive(rcvPkt2, sndRcvSok);
 		if (verbose) {
-			System.out.println("Server ");
-			System.out.print("Opcode ");
-			System.out.println(new Integer(rcvPkt2.getData()[1]));
-			System.out.println(new String(rcvPkt2.getData()));
-		}
+			 			System.out.println("Server ");
+			 			System.out.print("Opcode ");
+			 			System.out.println(new Integer(rcvPkt2.getData()[1]));
+			 			System.out.println(new String(rcvPkt2.getData()));
+			 		}
 	}
 	
 	/**
@@ -217,6 +222,7 @@ public class Host {
 	 * Should not be called before receive1().
 	 */
 	public void forward() {
+		
 		DatagramSocket errorSocket;
 		
 		sndPkt = new DatagramPacket(rcvPkt1.getData(), rcvPkt1.getLength(), target1, targetPort);
@@ -224,16 +230,22 @@ public class Host {
 		target2 = rcvPkt1.getAddress();
 		returnPort = rcvPkt1.getPort();
 		
-		if (errorReq == CHANGETIDCLIENT) {
+		
+		if (errorReq == CHANGETIDCLIENT && !first) {
 			try {
 				errorSocket = new DatagramSocket();
 				send(sndPkt, errorSocket);
 				errorSocket.close();
+				errorReq = NORMAL;
+				
 			} catch (SocketException e) {
 				
 			}
-		}
-		else send(sndPkt, sndRcvSok);
+		} else 
+			{ 
+			send(sndPkt, sndRcvSok);
+			first=false;
+			}
 	}
 	
 	/**
@@ -248,15 +260,21 @@ public class Host {
 		
 		targetPort = rcvPkt2.getPort();
 		
-		if (errorReq == CHANGETIDSERVER) {
+		if (errorReq == CHANGETIDSERVER && !first) {
 			try {
 				errorSocket = new DatagramSocket();
 				send(sndPkt, errorSocket);
 				errorSocket.close();
+				errorReq = NORMAL;
+				
 			} catch (SocketException e) {
 				
 			}
-		} else send(sndPkt, sndSok);
+		} else 
+			{
+			send(sndPkt, sndSok);
+			first = false;
+		}
 	}
 	
 	/**
@@ -320,7 +338,7 @@ public class Host {
 		}
 		public void listErrors(){
 			System.out.println("1 - Change Opcode");
-			System.out.println("2 - Change length");
+			System.out.println("2 - Change Length");
 			System.out.println("3 - Change Transfer ID of server");
 			System.out.println("4 - Change Transfer ID of client.");
 		}

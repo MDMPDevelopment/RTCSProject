@@ -1,3 +1,4 @@
+package project;
 import java.net.DatagramSocket;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -23,7 +24,7 @@ public class Client {
 	private InetAddress target;
 	
 	private int port;
-	
+	private int TID;
 	private boolean test, verbose;
 	
 	public Client() throws UnknownHostException, SocketException {
@@ -94,7 +95,21 @@ public class Client {
 		System.out.println("Exit successful.");
 		System.exit(0);
 	}
-	
+	public byte[] createErrorMsg(byte type, byte[] errorMsg)
+	{
+		byte msg[] = new byte[errorMsg.length + 5];
+		
+		msg[0] = (byte)0;
+		msg[1] = (byte)5;
+		msg[2] = (byte)0;
+		msg[3] = type;
+		
+		System.arraycopy(errorMsg, 0, msg, 4, errorMsg.length);
+		
+		msg[msg.length - 1] = (byte)0;
+				
+		return msg;
+	}
 	/**
 	 * Starts a write operation. Reads from a local file and writes to the server across the network.
 	 * @throws IOException
@@ -124,12 +139,13 @@ public class Client {
 		// Set the destination port and address based on the request response.
 		port = rcvPkt.getPort();
 		target = rcvPkt.getAddress();
-		
+		TID = port;
 		if (verbose) {
 			System.out.print("Response received from ");
 			System.out.print(target.getHostAddress());
 			System.out.print(" on port ");
 			System.out.println(port);
+			
 		}
 		
 		// Read in up to 512 bytes of data.
@@ -147,11 +163,11 @@ public class Client {
 		 */
 		while (sizeRead != -1) {
 			if (verbose) {
-				System.out.print("Opcode ");
-				System.out.println(new Integer(rcvPkt.getData()[1]));
-				System.out.println(new String(rcvPkt.getData()));
-				System.out.println();
-			}
+				 				System.out.print("Opcode ");
+				 			System.out.println(new Integer(rcvPkt.getData()[1]));
+				 			System.out.println(new String(rcvPkt.getData()));
+				 			 				System.out.println();
+				 			}
 			request = new byte[4 + sizeRead];
 			
 			if (verbose) System.out.println(new String(rcvPkt.getData()));
@@ -174,6 +190,24 @@ public class Client {
 			send();
 			receive();
 			
+			if(rcvPkt.getPort() != TID)
+			{
+				System.out.println("Invalid TID, asking for retransfer");
+				byte [] errorData =createErrorMsg((byte) 5, "Invalid TID".getBytes());
+				sndPkt = new DatagramPacket (errorData, errorData.length, target, port);
+				send();
+				receive();
+			}
+			if(rcvPkt.getData()[1]==5)
+			{
+				if (rcvPkt.getData()[3]==5)
+				{
+					System.out.println("Error sending packets, attempting to retransfer");
+					send();
+					
+				}
+				
+			}
 			if (++block[1] == 0) block[0]++;
 			
 			sizeRead = in.read(data);
@@ -212,13 +246,14 @@ public class Client {
 		// Set the destination port and address based on the request response.
 		target = rcvPkt.getAddress();
 		port = rcvPkt.getPort();
-		
+		TID = port;
 		if (verbose) {
 			System.out.print("Response received from ");
 			System.out.print(target.getHostAddress());
 			System.out.print(" on port ");
 			System.out.println(port);
 			System.out.println("Starting read.");
+			
 		}
 		
 		/*
@@ -234,12 +269,31 @@ public class Client {
 			if (first) {
 				first = false;
 			} else receive();
-
+			System.out.println("Receiving data from " + rcvPkt.getPort());
 			if (verbose) {
-				System.out.print("Opcode ");
-				System.out.println(new Integer(rcvPkt.getData()[1]));
-				System.out.println(new String(rcvPkt.getData()));
+				 				System.out.print("Opcode ");
+				 				System.out.println(new Integer(rcvPkt.getData()[1]));
+				 				System.out.println(new String(rcvPkt.getData()));
+				 			}
+			if(rcvPkt.getPort() != TID)
+			{
+				System.out.println("Invalid TID, asking for retransfer");
+				byte [] errorData =createErrorMsg((byte) 5, "Invalid TID".getBytes());
+				sndPkt = new DatagramPacket (errorData, errorData.length, target, port);
+				send();
+				receive();
 			}
+			if(rcvPkt.getData()[1]==5)
+			{
+				if (rcvPkt.getData()[3]==5)
+				{
+					System.out.println("Error sending packets, attempting to retransfer");
+					send();
+					
+				}
+				
+			}
+			if (verbose) System.out.println(new String(rcvPkt.getData()));
 			
 			if (++block[1] == 0) block[0]++;
 			
@@ -254,6 +308,7 @@ public class Client {
 			
 			sndPkt = new DatagramPacket(request, request.length, target, port);
 			send();
+			
 		} while (rcvPkt.getLength() > 515);
 		out.close();
 		System.out.println("Finished read.");
