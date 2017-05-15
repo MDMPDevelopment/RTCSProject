@@ -89,7 +89,9 @@ public class Client {
 	 * Closes the socket and exits.
 	 */
 	private void quit() {
+		if (verbose) System.out.println("Closing sock");
 		sock.close();
+		System.out.println("Exit successful.");
 		System.exit(0);
 	}
 	
@@ -144,6 +146,11 @@ public class Client {
 		 *   - Read in a new set of data.
 		 */
 		while (sizeRead != -1) {
+			if (verbose) {
+				System.out.print("Opcode ");
+				System.out.println(new Integer(rcvPkt.getData()[1]));
+				System.out.println(rcvPkt.getData());
+			}
 			request = new byte[4 + sizeRead];
 			
 			if (verbose) System.out.println(new String(rcvPkt.getData()));
@@ -157,6 +164,9 @@ public class Client {
 				System.out.print(new String(request));
 				System.out.print(" to ");
 				System.out.println(port);
+				System.out.print("Opcode ");
+				System.out.println(new Integer(request[1]));
+				System.out.println();
 			}
 			sndPkt = new DatagramPacket(request, request.length, target, port);
 			
@@ -168,7 +178,7 @@ public class Client {
 			sizeRead = in.read(data);
 		}
 		in.close();
-		if (verbose) System.out.println("Finished write.");
+		System.out.println("Finished write.");
 	}
 	
 	/**
@@ -224,7 +234,11 @@ public class Client {
 				first = false;
 			} else receive();
 
-			if (verbose) System.out.println(new String(rcvPkt.getData()));
+			if (verbose) {
+				System.out.print("Opcode ");
+				System.out.println(new Integer(rcvPkt.getData()[1]));
+				System.out.println(new String(rcvPkt.getData()));
+			}
 			
 			if (++block[1] == 0) block[0]++;
 			

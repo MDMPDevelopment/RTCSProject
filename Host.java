@@ -118,10 +118,13 @@ public class Host {
 	 * Closes the sockets and exits.
 	 */
 	private void quit() {
+		if (verbose) System.out.println("Closing port 23");
 		port23.close();
+		if (verbose) System.out.println("Closing sndSok");
 		sndSok.close();
+		if (verbose) System.out.println("Closing sndRcvSok");
 		sndRcvSok.close();
-		if (verbose) System.out.println("Exit succesful.");
+		System.out.println("Exit succesful.");
 		System.exit(0);
 	}
 	
