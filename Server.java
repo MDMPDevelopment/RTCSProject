@@ -92,6 +92,7 @@ public class Server {
 		if (verbose) {
 			System.out.print("Opcode ");
 			System.out.println(new Integer(data[1]));
+			System.out.println();
 		}
 		
 		file = new byte[data.length];
@@ -133,7 +134,7 @@ public class Server {
 			transfer.start();
 		} else {
 			byte [] emsg = "Error 4: Illegal TFTP operation".getBytes();
-			System.out.println("Error 4: Illegal TFTP operation");
+			if (verbose) System.out.println("Error 4: Illegal TFTP operation");
 			DatagramSocket sock;
 			try {
 				sock = new DatagramSocket();
