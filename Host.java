@@ -224,11 +224,21 @@ public class Host {
 	 * Should not be called before receive2().
 	 */
 	public void forwardReply() {
+		DatagramSocket errorSocket;
+		
 		sndPkt = new DatagramPacket(rcvPkt2.getData(), rcvPkt2.getLength(), target2, returnPort);
 		
 		targetPort = rcvPkt2.getPort();
 		
-		send(sndPkt, sndSok);
+		if (errorReq == CHANGETIDSERVER) {
+			try {
+				errorSocket = new DatagramSocket();
+				send(sndPkt, errorSocket);
+				errorSocket.close();
+			} catch (SocketException e) {
+				
+			}
+		} else send(sndPkt, sndSok);
 	}
 	
 	/**
