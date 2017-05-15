@@ -197,6 +197,7 @@ public class Host {
 	 */
 	public void forward() {
 		//printData(rcvPkt1);
+		DatagramSocket errorSocket;
 		
 		sndPkt = new DatagramPacket(rcvPkt1.getData(), rcvPkt1.getLength(), target1, targetPort);
 		// Save the client IP and port to send the server's response.
@@ -205,7 +206,16 @@ public class Host {
 		
 		//printData(sndPkt);
 		
-		send(sndPkt, sndRcvSok);
+		if (errorReq == CHANGETIDCLIENT) {
+			try {
+				errorSocket = new DatagramSocket();
+				send(sndPkt, errorSocket);
+				errorSocket.close();
+			} catch (SocketException e) {
+				
+			}
+		}
+		else send(sndPkt, sndRcvSok);
 	}
 	
 	/**
@@ -283,7 +293,8 @@ public class Host {
 		public void listErrors(){
 			System.out.println("1 - Change Opcode");
 			System.out.println("2 - Change length");
-			System.out.println("3 - Change Transfer ID");
+			System.out.println("3 - Change Transfer ID of server");
+			System.out.println("4 - Change Transfer ID of client.");
 		}
 		public void run() {
 			try {
