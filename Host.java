@@ -73,11 +73,16 @@ public class Host {
 	 */
 	private byte[] changeLength(DatagramPacket pkt)
 	{
+		int i = 0;
 		byte[] data = new byte[530];
-		for (int i = 0; i<pkt.getLength(); i++)
+
+		while (i < pkt.getLength())
 		{
-			data[i]= pkt.getData()[i];
+			data[i]= pkt.getData()[i++];
 		}
+		
+		while (i < 530) data[i++] = 0x05;
+		
 		return data;
 		
 	}
