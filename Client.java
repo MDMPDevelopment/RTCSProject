@@ -72,6 +72,14 @@ public class Client {
 		
 		try {
 			sock.receive(rcvPkt);
+			if (rcvPkt.getData()[1]==5)
+			{
+				if (rcvPkt.getData()[3] == 4)
+				{
+					System.out.println("Illegal TFTP operation was requested.");
+					quit();
+				}
+			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
