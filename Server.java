@@ -307,18 +307,27 @@ public class Server {
 			do {
 				receive();
 				
-				if (verbose) System.out.print("Received ");
-				if (verbose) System.out.println(new String(rPkt.getData()));
-				if (verbose) System.out.print(rPkt.getLength());
-				if (verbose) System.out.println(" bytes");
+				if (verbose) {
+					System.out.print("Received ");
+					System.out.println(new String(rPkt.getData()));
+					System.out.print(rPkt.getLength());
+					System.out.println(" bytes");
+					System.out.print("Opcode ");
+					System.out.println(new Integer(rPkt.getData()[1]));
+					System.out.println();
+				}
 				
 				if (++block[1] == 0) block[0]++;
 				
 				data = new byte[rPkt.getLength() - 4];
 				System.arraycopy(rPkt.getData(), 4, data, 0, rPkt.getLength() - 4);
 				
-				if (verbose) System.out.print("Output ");
-				if (verbose) System.out.println(new String(data));
+				if (verbose) {
+					System.out.print("Output ");
+					System.out.println(new String(data));
+					System.out.println();
+				}
+				
 				out.write(data, 0, data.length);
 				out.flush();
 				
@@ -363,12 +372,25 @@ public class Server {
 				System.arraycopy(block, 0, response, 2, 2);
 				System.arraycopy(data, 0, response, 4, sizeRead);
 				
-				if (verbose) System.out.print("Sent ");
-				if (verbose) System.out.println(new String(response));
-				
+				if (verbose) {
+					System.out.print("Sent ");
+					System.out.println(new String(response));
+					System.out.print("Opcode ");
+					System.out.println(new Integer(response[1]));
+					System.out.println();
+				}
+
 				sPkt = new DatagramPacket(response, sizeRead + 4, target, port);
 				send(sPkt);
 				receive();
+				
+				if (verbose) {
+					System.out.print("Received ");
+					System.out.println(new String(rPkt.getData()));
+					System.out.print("Opcode ");
+					System.out.println(new Integer(rPkt.getData()[1]));
+					System.out.println();
+				}
 				
 				sizeRead = in.read(data);
 			}
