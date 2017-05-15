@@ -149,7 +149,8 @@ public class Client {
 			if (verbose) {
 				System.out.print("Opcode ");
 				System.out.println(new Integer(rcvPkt.getData()[1]));
-				System.out.println(rcvPkt.getData());
+				System.out.println(new String(rcvPkt.getData()));
+				System.out.println();
 			}
 			request = new byte[4 + sizeRead];
 			

@@ -89,6 +89,11 @@ public class Server {
 		
 		byte[] data = request.getData();
 		
+		if (verbose) {
+			System.out.print("Opcode ");
+			System.out.println(new Integer(data[1]));
+		}
+		
 		file = new byte[data.length];
 		mode = new byte[netascii.length()];
 		int i = 2;

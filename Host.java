@@ -205,7 +205,7 @@ public class Host {
 		receive(rcvPkt2, sndRcvSok);
 		if (verbose) {
 			System.out.println("Server ");
-			System.out.print("Opcode");
+			System.out.print("Opcode ");
 			System.out.println(new Integer(rcvPkt2.getData()[1]));
 			System.out.println(new String(rcvPkt2.getData()));
 		}
