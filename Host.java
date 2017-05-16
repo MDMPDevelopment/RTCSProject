@@ -1,4 +1,3 @@
-package project;
 
 import java.net.DatagramSocket;
 import java.io.IOException;
@@ -15,7 +14,8 @@ public class Host {
 	private static final int CHANGELENGTH = 2;
 	private static final int CHANGETIDSERVER = 3;
 	private static final int CHANGETIDCLIENT = 4;
-	Boolean first = true;
+	Boolean first;
+	Boolean firstreply;
 	private DatagramSocket port23, sndRcvSok, sndSok;
 	private DatagramPacket rcvPkt1, rcvPkt2, sndPkt;
 	private InetAddress target1, target2;
@@ -41,6 +41,8 @@ public class Host {
 		verbose = false;
 		transfer = false;
 		reset = false;
+		first = true;
+		firstreply=true;
 		test = 0;
 		targetPort = 69;
 		
@@ -187,7 +189,7 @@ public class Host {
 		if (verbose) System.out.println(sndSok.getLocalPort());
 		
 		receive(rcvPkt1, sndSok);
-
+		
 		if (verbose) {
 			 			System.out.println("Client ");
 			 			System.out.print("Opcode ");
@@ -259,11 +261,12 @@ public class Host {
 		sndPkt = new DatagramPacket(rcvPkt2.getData(), rcvPkt2.getLength(), target2, returnPort);
 		
 		targetPort = rcvPkt2.getPort();
-		
-		if (errorReq == CHANGETIDSERVER && !first) {
+		System.out.println(firstreply);
+		if (errorReq == CHANGETIDSERVER && !firstreply) {
 			try {
 				errorSocket = new DatagramSocket();
 				send(sndPkt, errorSocket);
+				System.out.println("New port: " + errorSocket.getLocalPort());
 				errorSocket.close();
 				errorReq = NORMAL;
 				
@@ -273,7 +276,7 @@ public class Host {
 		} else 
 			{
 			send(sndPkt, sndSok);
-			first = false;
+			firstreply = false;
 		}
 	}
 	
@@ -362,4 +365,5 @@ public class Host {
 			host.receive1();
 		}
 	}
+
 }
