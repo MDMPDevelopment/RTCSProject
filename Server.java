@@ -1,4 +1,4 @@
-package project;
+
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.io.BufferedInputStream;
@@ -309,14 +309,31 @@ public class Server {
 			 */
 			do {
 				receive();
-				
-				/*if(rPkt.getData()[1]==5)
+				if (verbose) {
+ 					System.out.print("Received ");
+ 					System.out.println(new String(rPkt.getData()));
+ 					System.out.print(rPkt.getLength());
+ 					System.out.println(" bytes");
+ 					System.out.print("Opcode ");
+ 					System.out.println(new Integer(rPkt.getData()[1]));
+ 					System.out.println();
+ 				}
+				if(rPkt.getData()[1]==5)
 				{
 					if (rPkt.getData()[3]==5)
 					{
 						System.out.println("Error sending packets, attempting to retransfer");
 						send(sPkt);
 						receive();
+						if (verbose) {
+		 					System.out.print("Received ");
+		 					System.out.println(new String(rPkt.getData()));
+		 					System.out.print(rPkt.getLength());
+		 					System.out.println(" bytes");
+		 					System.out.print("Opcode ");
+		 					System.out.println(new Integer(rPkt.getData()[1]));
+		 					System.out.println();
+		 				}
 					}
 					
 				}
@@ -327,16 +344,17 @@ public class Server {
 					sPkt  = new DatagramPacket (errorData, errorData.length, target, port);
 					send(sPkt);
 					receive();
-				}*/
-				if (verbose) {
-					 					System.out.print("Received ");
-					 					System.out.println(new String(rPkt.getData()));
-					 					System.out.print(rPkt.getLength());
-					 					System.out.println(" bytes");
-					 					System.out.print("Opcode ");
-					 					System.out.println(new Integer(rPkt.getData()[1]));
-					 					System.out.println();
-					 				}
+					if (verbose) {
+	 					System.out.print("Received ");
+	 					System.out.println(new String(rPkt.getData()));
+	 					System.out.print(rPkt.getLength());
+	 					System.out.println(" bytes");
+	 					System.out.print("Opcode ");
+	 					System.out.println(new Integer(rPkt.getData()[1]));
+	 					System.out.println();
+	 				}
+				}
+				
 				
 				if (++block[1] == 0) block[0]++;
 				
@@ -417,9 +435,17 @@ public class Server {
 						System.out.println("Error sending packets, attempting to retransfer");
 						send(sPkt);
 						receive();
+						if (verbose) {
+		 					System.out.print("Received ");
+		 				System.out.println(new String(rPkt.getData()));
+		 					System.out.print("Opcode ");
+		 					System.out.println(new Integer(rPkt.getData()[1]));
+		 					System.out.println();
+		 				}
 					}
 					
 				}
+			
 				if (rPkt.getPort() != TID)
 				{
 					System.out.println("Invalid TID, asking for retransfer");
@@ -427,6 +453,13 @@ public class Server {
 					sPkt  = new DatagramPacket (errorData, errorData.length, target, port);
 					send(sPkt);
 					receive();
+					if (verbose) {
+	 					System.out.print("Received ");
+	 				System.out.println(new String(rPkt.getData()));
+	 					System.out.print("Opcode ");
+	 					System.out.println(new Integer(rPkt.getData()[1]));
+	 					System.out.println();
+	 				}
 				}
 				sizeRead = in.read(data);
 			}
