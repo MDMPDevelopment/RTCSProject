@@ -59,20 +59,26 @@ public class Server {
 		}
 	}
 	/**
-	 * 
-	 **/
+	 * Generates an error message.
+	 * <p>
+	 * Builds an error message of the format:
+	 * {0x00, 0x05, 0x00, type, errorMsg}
+	 * @param type Which error condition is present.
+	 * @param errorMsg A more detailed message describing the error. 
+	 * @return A byte array containing the error.
+	 */
 	public byte[] createErrorMsg(byte type, byte[] errorMsg)
 	{
 		byte msg[] = new byte[errorMsg.length + 5];
 		
-		msg[0] = (byte)0;
-		msg[1] = (byte)5;
-		msg[2] = (byte)0;
+		msg[0] = 0x00;
+		msg[1] = 0x05;
+		msg[2] = 0x00;
 		msg[3] = type;
 		
 		System.arraycopy(errorMsg, 0, msg, 4, errorMsg.length);
 		
-		msg[msg.length - 1] = (byte)0;
+		msg[msg.length - 1] = 0x00;
 				
 		return msg;
 	}
@@ -92,11 +98,13 @@ public class Server {
 		if (verbose) System.out.println("Parsing packet.");
 		
 		byte[] data = request.getData();
+		
 		if (verbose) {
-			 			System.out.print("Opcode ");
-			 			System.out.println(new Integer(data[1]));
-			 			System.out.println();
-			 		}
+			System.out.print("Opcode ");
+			System.out.println(new Integer(data[1]));
+			System.out.println();
+		}
+		
 		valid = (data.length <= 516);
 		file = new byte[data.length];
 		mode = new byte[netascii.length()];
