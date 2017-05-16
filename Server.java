@@ -12,7 +12,7 @@ import java.util.Scanner;
 
 public class Server {
 	private static final String netascii = "netascii";
-	private static final String octet = "octet   ";
+	private static final String octet = "octet";
 	
 	private DatagramSocket port69;
 	private byte[] mode, file;
@@ -21,6 +21,7 @@ public class Server {
 	
 	private Boolean valid, test, verbose;
 	private int TID;
+	
 	public Server() {
 		try {
 			port69 = new DatagramSocket(69);
@@ -105,7 +106,7 @@ public class Server {
 		valid = (data[1] == 0x01 || data[1] == 0x02) && valid;
 		
 		// Read out the filename from the request.
-		while (data[i] != 0x00 && i < data.length) {
+		while (data[i] != 0x00 && i < request.getLength()) {
 			file[j++] = data[i++];
 			if (verbose) System.out.print((char)file[j - 1]);
 		}
@@ -118,14 +119,14 @@ public class Server {
 		j = 0;
 		
 		// Read out the mode from the request.
-		while (data[i] != 0x00 && i < data.length && j < netascii.length()) {
+		while (data[i] != 0x00 && i < request.getLength() && j < netascii.length()) {
 			mode[j++] = data[i++]; 
 			if (verbose) System.out.print((char)mode[j - 1]);
 		}
 		
 		if (verbose) System.out.println();
 		
-		//valid = (new String(mode).substring(0, netascii.length()).toLowerCase().equals(netascii) || new String(mode).substring(0, octet.length()).toLowerCase().equals(octet)) && valid;
+		valid = (new String(mode).toLowerCase().trim().equals(netascii) || new String(mode).toLowerCase().trim().equals(octet)) && valid;
 		valid = data[i] == 0x00 && valid;
 		
 		// If the packet is a valid request, start a new transfer.
