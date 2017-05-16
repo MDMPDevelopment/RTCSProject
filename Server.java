@@ -39,7 +39,9 @@ public class Server {
 	 * Closes the port and exits. Outstanding transfers will run to completion.
 	 */
 	private void quit() {
+		if (verbose) System.out.println("Closing port 69.");
 		port69.close();
+		System.out.println("Exiting.");
 		System.exit(0);
 	}
 	
@@ -50,6 +52,7 @@ public class Server {
 	 */
 	public void receive() {
 		request = new DatagramPacket(new byte[516], 516);
+		
 		try {
 			port69.receive(request);
 			TID = request.getPort();
