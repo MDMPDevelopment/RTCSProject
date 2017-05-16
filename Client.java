@@ -1,4 +1,3 @@
-package project;
 import java.net.DatagramSocket;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -145,7 +144,10 @@ public class Client {
 			System.out.print(target.getHostAddress());
 			System.out.print(" on port ");
 			System.out.println(port);
-			
+			System.out.print("Opcode ");
+ 			System.out.println(new Integer(rcvPkt.getData()[1]));
+ 			System.out.println(new String(rcvPkt.getData()));
+ 			 				System.out.println();
 		}
 		
 		// Read in up to 512 bytes of data.
@@ -162,15 +164,10 @@ public class Client {
 		 *   - Read in a new set of data.
 		 */
 		while (sizeRead != -1) {
-			if (verbose) {
-				 				System.out.print("Opcode ");
-				 			System.out.println(new Integer(rcvPkt.getData()[1]));
-				 			System.out.println(new String(rcvPkt.getData()));
-				 			 				System.out.println();
-				 			}
+			
 			request = new byte[4 + sizeRead];
 			
-			if (verbose) System.out.println(new String(rcvPkt.getData()));
+			
 			
 			System.arraycopy(opcode, 0, request, 0, 2);
 			System.arraycopy(block, 0, request, 2, 2);
@@ -189,7 +186,14 @@ public class Client {
 			
 			send();
 			receive();
-			
+			if (verbose)
+			{
+				System.out.println("Received packet");
+				System.out.print("Opcode ");
+	 			System.out.println(new Integer(rcvPkt.getData()[1]));
+	 			System.out.println(new String(rcvPkt.getData()));
+	 			 				System.out.println();
+			}
 			if(rcvPkt.getPort() != TID)
 			{
 				System.out.println("Invalid TID, asking for retransfer");
@@ -197,13 +201,39 @@ public class Client {
 				sndPkt = new DatagramPacket (errorData, errorData.length, target, port);
 				send();
 				receive();
+				if (verbose)
+				{
+					System.out.println("Received packet");
+					System.out.print("Opcode ");
+		 			System.out.println(new Integer(rcvPkt.getData()[1]));
+		 			System.out.println(new String(rcvPkt.getData()));
+		 			 				System.out.println();
+				}
 			}
 			if(rcvPkt.getData()[1]==5)
 			{
 				if (rcvPkt.getData()[3]==5)
 				{
 					System.out.println("Error sending packets, attempting to retransfer");
+					if (verbose) {
+						System.out.print("Sending ");
+						System.out.print(new String(request));
+						System.out.print(" to ");
+						System.out.println(port);
+						System.out.print("Opcode ");
+						System.out.println(new Integer(request[1]));
+						System.out.println();
+					}
 					send();
+					receive(); 
+					if (verbose)
+					{
+						System.out.println("Received packet");
+						System.out.print("Opcode ");
+			 			System.out.println(new Integer(rcvPkt.getData()[1]));
+			 			System.out.println(new String(rcvPkt.getData()));
+			 			 				System.out.println();
+					}
 					
 				}
 				
@@ -264,55 +294,72 @@ public class Client {
 		 *   - Write the data to the file.
 		 *   - Send the response.
 		 */
+		
 		do {
-			// Used to prevent a double receive() on the first block. 
-			if (first) {
-				first = false;
-			} else receive();
-			System.out.println("Receiving data from " + rcvPkt.getPort());
-			if (verbose) {
+			 			// Used to prevent a double receive() on the first block. 
+			 			if (first) {
+			 				first = false;
+			 			} else receive();
+			 
+			 			if (verbose) {
+			 				System.out.println("Received packet");
 				 				System.out.print("Opcode ");
 				 				System.out.println(new Integer(rcvPkt.getData()[1]));
-				 				System.out.println(new String(rcvPkt.getData()));
-				 			}
-			if(rcvPkt.getPort() != TID)
-			{
-				System.out.println("Invalid TID, asking for retransfer");
-				byte [] errorData =createErrorMsg((byte) 5, "Invalid TID".getBytes());
-				sndPkt = new DatagramPacket (errorData, errorData.length, target, port);
-				send();
-				receive();
-			}
-			if(rcvPkt.getData()[1]==5)
-			{
-				if (rcvPkt.getData()[3]==5)
-				{
-					System.out.println("Error sending packets, attempting to retransfer");
-					send();
-					
-				}
-				
-			}
-			if (verbose) System.out.println(new String(rcvPkt.getData()));
-			
-			if (++block[1] == 0) block[0]++;
-			
-			data = new byte[rcvPkt.getLength() - 4];
-			System.arraycopy(rcvPkt.getData(), 4, data, 0, data.length);
-			out.write(data, 0, data.length);
-			out.flush();
-			
-			request = new byte[4];
-			System.arraycopy(opcode, 0, request, 0, 2);
-			System.arraycopy(block, 0, request, 2, 2);
-			
-			sndPkt = new DatagramPacket(request, request.length, target, port);
-			send();
-			
-		} while (rcvPkt.getLength() > 515);
-		out.close();
-		System.out.println("Finished read.");
-	}
+				 			System.out.println(new String(rcvPkt.getData()));
+			 			}
+			 			if(rcvPkt.getPort() != TID)
+			 				
+ 				 		
+			 				 			{
+			 				 				System.out.println("Invalid TID, asking for retransfer");
+			 				 				byte [] errorData =createErrorMsg((byte) 5, "Invalid TID".getBytes());
+			 				 				sndPkt = new DatagramPacket (errorData, errorData.length, target, port);
+			 				 				send();
+			 				 				receive();
+			 				 				if (verbose) {
+			 				 					System.out.println("Received packet");
+				 				 				System.out.print("Opcode ");
+				 				 				System.out.println(new Integer(rcvPkt.getData()[1]));
+				 				 			System.out.println(new String(rcvPkt.getData()));
+				 				 		}
+			 				 			}
+			 				 			if(rcvPkt.getData()[1]==5)
+			 				 			{
+			 				 				if (rcvPkt.getData()[3]==5)
+			 				 				{
+			 				 					System.out.println("Error sending packets, attempting to retransfer");
+			 				 					
+			 				 					send();
+			 				 					receive();
+			 				 					if (verbose) {
+			 				 						System.out.println("Received packet");
+			 						 				System.out.print("Opcode ");
+			 						 				System.out.println(new Integer(rcvPkt.getData()[1]));
+			 						 			System.out.println(new String(rcvPkt.getData()));
+			 					 			}
+			 				 				}
+			 				 				
+			 				 			}
+			 				 			
+			 			if (++block[1] == 0) block[0]++;
+			 			
+			 			data = new byte[rcvPkt.getLength() - 4];
+			 			System.arraycopy(rcvPkt.getData(), 4, data, 0, data.length);
+			 			out.write(data, 0, data.length);
+			 			out.flush();
+			 		
+			 		request = new byte[4];
+			 			System.arraycopy(opcode, 0, request, 0, 2);
+			 			System.arraycopy(block, 0, request, 2, 2);
+			 			
+			 			sndPkt = new DatagramPacket(request, request.length, target, port);
+			 			
+			 			send();
+			 			
+			 		} while (rcvPkt.getLength() > 515);
+			 		out.close();
+			 		System.out.println("Finished read.");
+			 	}
 	
 	/**
 	 * Builds a byte array for a request packet.
