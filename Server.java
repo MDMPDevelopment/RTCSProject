@@ -331,11 +331,12 @@ public class Server {
  					System.out.print("Opcode ");
  					System.out.println(new Integer(rPkt.getData()[1]));
  					System.out.print("Block ");
- 					System.out.println(new Integer(rPkt.getData()[3]));
+ 					System.out.println(0xff & rPkt.getData()[3] + 256 * rPkt.getData()[2]);
  					System.out.println();
  				}
 				
-				if (rPkt.getPort() != port) {
+				// The received packet came from an unknown source.
+				if (!rPkt.getAddress().equals(target) || rPkt.getPort() != port) {
 					if (verbose) System.out.println(badTID);
 					
 					byte[] errorData =createErrorMsg((byte)5, badTID.getBytes());
@@ -352,6 +353,7 @@ public class Server {
 						send(sPkt);
 						receive();
 						
+						// If the next packet is correct, print packet information.
 						if (verbose && rPkt.getData()[1] == 0x03) {
 							System.out.print("Received ");
 		 					System.out.println(new String(rPkt.getData()));
@@ -360,20 +362,25 @@ public class Server {
 		 					System.out.print("Opcode ");
 		 					System.out.println(new Integer(rPkt.getData()[1]));
 		 					System.out.print("Block ");
-		 					System.out.println(new Integer(rPkt.getData()[3]));
+		 					System.out.println(0xff & rPkt.getData()[3] + 256 * (0xff & rPkt.getData()[2]));
 		 					System.out.println();
 		 				}
 					} else if (rPkt.getData()[3] == 0x04) {
+						// Invalid TFTP operation. Unrecoverable by definition.
 						byte[] errorMsg = new byte[rPkt.getLength()];
+						
 						System.arraycopy(rPkt.getData(), 4, errorMsg, 0, rPkt.getLength() - 5);
+						
 						if (verbose) System.out.println("Error code 4, Invalid TFTP Operation");
 						System.out.println(new String(errorMsg));
+						
 						quit();
 					}
 				}
 				
 				if (++block[1] == 0) block[0]++;
 				
+				// Separate data from header.
 				data = new byte[rPkt.getLength() - 4];
 				System.arraycopy(rPkt.getData(), 4, data, 0, rPkt.getLength() - 4);
 				
@@ -386,14 +393,22 @@ public class Server {
 				out.write(data, 0, data.length);
 				out.flush();
 				
+				// Build and send acknowledge packet.
 				response = new byte[4];
 				response[0] = 0x00;
 				response[1] = 0x04;
 				System.arraycopy(block, 0, response, 2, 2);
 				
+				if (verbose) {
+					System.out.print("Sending acknowledge for block ");
+ 					System.out.println(0xff & rPkt.getData()[3] + 256 * (0xff & rPkt.getData()[2]));
+ 					System.out.println();
+ 				}
+				
 				sPkt = new DatagramPacket(response, response.length, target, port);
 				send(sPkt);
-			} while (rPkt.getLength() > 515);
+			} while (rPkt.getLength() == 516);
+			
 			out.close();
 			if (verbose) System.out.println("Finished write.");
 		}
