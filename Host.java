@@ -15,13 +15,13 @@ public class Host {
 	private static final int CHANGETIDSERVER = 3;
 	private static final int CHANGETIDCLIENT = 4;
 	private static final int CHANGEOPCODEv = 5;
-	
+
 	private boolean first, firstreply, verbose, reset;
 	private int targetPort, returnPort, test, errorReq;
 	private DatagramSocket port23, sndRcvSok, sndSok;
 	private DatagramPacket rcvPkt1, rcvPkt2, sndPkt;
 	private InetAddress target1, target2;
-	
+
 	public Host() {
 		try {
 			port23 = new DatagramSocket(23);
@@ -33,17 +33,17 @@ public class Host {
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
 		}
-				
+
 		verbose = false;
 		reset = false;
 		first = true;
 		firstreply=true;
 		test = 0;
 		targetPort = 69;
-		
+
 		new UI().start();
 	}
-	
+
 	/**
 	 * Receives data from the given socket into the given packet.
 	 * @param pkt
@@ -56,37 +56,36 @@ public class Host {
 			e.printStackTrace();
 		}
 	}
+
 	/** Changes the opcode of the received packet to 15
 	 * @param pkt
 	 */
-	private byte[] changeOpcode(DatagramPacket pkt)
-	{
+	private byte[] changeOpcode(DatagramPacket pkt) {
 		byte[] data = pkt.getData();
 		data[0] = errorReq == CHANGEOPCODE ? (byte)1 : (byte)0;
 		data[1] = errorReq == CHANGEOPCODE ? (byte)5 : (byte)4;	
 		return data;
-		
 	}
+
 	/**
 	 * Changes the length of the packet to 530 bytes
 	 */
-	private byte[] changeLength(DatagramPacket pkt)
-  	{
- 		int i = 0;
-  		byte[] data = new byte[530];
+	private byte[] changeLength(DatagramPacket pkt) {
+		int i = 0;
+		byte[] data = new byte[530];
 
- 
- 		while (i < pkt.getLength())
-  		{
 
- 			data[i]= pkt.getData()[i++];
-  		}
- 		
- 		while (i < 530) data[i++] = 0x05;
- 		
-  		return data;
-  		
-  	}
+		while (i < pkt.getLength())
+		{
+
+			data[i]= pkt.getData()[i++];
+		}
+
+		while (i < 530) data[i++] = 0x05;
+
+		return data;
+	}
+
 	/**
 	 * Sends data from the given packet through the given socket.
 	 * @param pkt
@@ -99,7 +98,7 @@ public class Host {
 			e.printStackTrace();
 		}
 	}
-	
+
 	/**
 	 * Closes the sockets and exits.
 	 */
@@ -110,22 +109,22 @@ public class Host {
 		sndSok.close();
 		if (verbose) System.out.println("Closing sndRcvSok");
 		sndRcvSok.close();
-		
+
 		System.out.println("Exiting");
 		System.exit(0);
 	}
-	
+
 	private int getTest() {
 		return this.test;
 	}
-	
+
 	public boolean isReset() {
 		boolean reset = this.reset;
 		this.reset = false;
-		
+
 		return reset;
 	}
-	
+
 	/**
 	 * Receives data from the client.
 	 * <p>
@@ -133,12 +132,12 @@ public class Host {
 	 */
 	public void rcvP23() {
 		rcvPkt1 = new DatagramPacket(new byte[receiveLength], receiveLength);
-		
+
 		if (verbose) System.out.print("Listening on ");
 		if (verbose) System.out.println(port23.getLocalPort());
-		
+
 		receive(rcvPkt1, port23);
-		
+
 		if (errorReq == CHANGEOPCODE || errorReq == CHANGEOPCODEv) {
 			byte[] data = changeOpcode(rcvPkt1);
 			rcvPkt1.setData(data);
@@ -148,7 +147,7 @@ public class Host {
 			rcvPkt1.setData(data);
 			errorReq = CHANGELENGTH;
 		}
-		
+
 		if (verbose) {
 			System.out.println("Client ");
 			System.out.print("Opcode ");
@@ -156,7 +155,7 @@ public class Host {
 			System.out.println(new String(rcvPkt1.getData()));
 		}
 	}
-	
+
 	/**
 	 * Receives data from the client.
 	 * <p>
@@ -167,9 +166,9 @@ public class Host {
 
 		if (verbose) System.out.print("Listening on ");
 		if (verbose) System.out.println(sndSok.getLocalPort());
-		
+
 		receive(rcvPkt1, sndSok);
-		
+
 		if (verbose) {
 			System.out.println("Client ");
 			System.out.print("Opcode ");
@@ -177,7 +176,7 @@ public class Host {
 			System.out.println(new String(rcvPkt1.getData()));
 		}
 	}
-	
+
 	/**
 	 * Receives a reply from the server.
 	 * <p>
@@ -185,10 +184,10 @@ public class Host {
 	 */
 	public void receive2() {
 		rcvPkt2 = new DatagramPacket(new byte[receiveLength], receiveLength);
-		
+
 		if (verbose) System.out.print("Listening on ");
 		if (verbose) System.out.println(sndRcvSok.getLocalPort());
-		
+
 		receive(rcvPkt2, sndRcvSok);
 		if (verbose) {
 			System.out.println("Server ");
@@ -197,22 +196,22 @@ public class Host {
 			System.out.println(new String(rcvPkt2.getData()));
 		}
 	}
-	
+
 	/**
 	 * Forwards the request from the client to the server.
 	 * <p>
 	 * Should not be called before receive1().
 	 */
 	public void forward() {
-		
+
 		DatagramSocket errorSocket;
-		
+
 		sndPkt = new DatagramPacket(rcvPkt1.getData(), rcvPkt1.getLength(), target1, targetPort);
 		// Save the client IP and port to send the server's response.
 		target2 = rcvPkt1.getAddress();
 		returnPort = rcvPkt1.getPort();
-		
-		
+
+
 		if (errorReq == CHANGETIDCLIENT && !first) {
 			try {
 				errorSocket = new DatagramSocket();
@@ -220,14 +219,14 @@ public class Host {
 				errorSocket.close();
 				errorReq = NORMAL;
 			} catch (SocketException e) {
-				
+
 			}
 		} else { 
 			send(sndPkt, sndRcvSok);
 			first=false;
 		}
 	}
-	
+
 	/**
 	 * Sends the server's reply to the client.
 	 * <p>
@@ -235,9 +234,9 @@ public class Host {
 	 */
 	public void forwardReply() {
 		DatagramSocket errorSocket;
-		
+
 		sndPkt = new DatagramPacket(rcvPkt2.getData(), rcvPkt2.getLength(), target2, returnPort);
-		
+
 		targetPort = rcvPkt2.getPort();
 		System.out.println(firstreply);
 		if (errorReq == CHANGETIDSERVER && !firstreply) {
@@ -248,14 +247,14 @@ public class Host {
 				errorSocket.close();
 				errorReq = NORMAL;
 			} catch (SocketException e) {
-				
+
 			}
 		} else {
 			send(sndPkt, sndSok);
 			firstreply = false;
 		}
 	}
-	
+
 	/**
 	 * UI
 	 * @author MatthewPenner
@@ -263,11 +262,11 @@ public class Host {
 	 */
 	private class UI extends Thread {
 		private Boolean quit;
-		
+
 		public UI () {
 			quit = false;
 		}
-		
+
 		/**
 		 * Prints out the user's options.
 		 */
@@ -279,7 +278,7 @@ public class Host {
 			System.out.println("Restart this between transfers.");
 			System.out.print("Test: "); System.out.print(test); System.out.print("    Verbose: "); System.out.println(verbose);
 		}
-		
+
 		/**
 		 * Prints the options and receives the user's inputs.
 		 * @throws IOException
@@ -287,11 +286,11 @@ public class Host {
 		public void ui() throws IOException {
 			String command;
 			Scanner input = new Scanner(System.in);
-			
+
 			while (!quit) {
 				printUI();
 				command = input.nextLine();
-				
+
 				switch (command.toLowerCase().charAt(0)) {
 					case 'q': quit = true;
 							  quit();
@@ -299,13 +298,13 @@ public class Host {
 					case 't': getTest();
 							  break;
 					case 'v': verbose = !verbose;
-							  break;
+						  	  break;
 					case 'r': reset = true;
-							  break;
+						  	  break;
 					case 'e': listErrors();
 							  break;
 					case '1': errorReq = CHANGEOPCODE;
-							  break;
+						  	  break;
 					case '2': errorReq = CHANGELENGTH;
 							  break;
 					case '3': errorReq = CHANGETIDSERVER;
@@ -317,7 +316,7 @@ public class Host {
 				}
 			}
 		}
-		
+
 		public void listErrors() {
 			System.out.println("1 - Change Opcode (invalid opcode)");
 			System.out.println("2 - Change Length");
@@ -325,7 +324,7 @@ public class Host {
 			System.out.println("4 - Change Transfer ID of client.");
 			System.out.println("5 - Change Opcode (valid opcode)");
 		}
-		
+
 		public void run() {
 			try {
 				this.ui();
@@ -334,11 +333,11 @@ public class Host {
 			}
 		}
 	}
-	
+
 	public static void main(String[] args) {
 		Host host = new Host();
 		host.rcvP23();
-		
+
 		while (true) {
 			host.forward();
 			host.receive2();

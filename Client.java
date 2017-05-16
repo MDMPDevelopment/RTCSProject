@@ -445,19 +445,19 @@ public class Client {
 				command = input.nextLine();
 
 				switch (command.toLowerCase().charAt(0)) {
-				case 'q': quit = true;
-				quit();
-				break;
-				case 't': test = !test;
-				break;
-				case 'v': verbose = !verbose;
-				break;
-				case 'w': startWrite();
-				break;
-				case 'r': startRead();
-				break;
-				case 'i': setTarget();
-				break;
+					case 'q': quit = true;
+							  quit();
+							  break;
+					case 't': test = !test;
+							  break;
+					case 'v': verbose = !verbose;
+							  break;
+					case 'w': startWrite();
+							  break;
+					case 'r': startRead();
+							  break;
+					case 'i': setTarget();
+							  break;
 				}
 			}
 		}
