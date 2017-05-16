@@ -20,7 +20,6 @@ public class Server {
 	private DatagramPacket request;
 	
 	private Boolean valid, test, verbose;
-	private int TID;
 	
 	public Server() {
 		try {
@@ -55,7 +54,6 @@ public class Server {
 		
 		try {
 			port69.receive(request);
-			TID = request.getPort();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -341,7 +339,7 @@ public class Server {
 					}
 					
 				}
-				if (rPkt.getPort() != TID)
+				if (rPkt.getPort() != port)
 				{
 					System.out.println("Invalid TID, asking for retransfer");
 					byte [] errorData =createErrorMsg((byte) 5, "Invalid TID".getBytes());
@@ -358,7 +356,6 @@ public class Server {
 	 					System.out.println();
 	 				}
 				}
-				
 				
 				if (++block[1] == 0) block[0]++;
 				
@@ -450,7 +447,7 @@ public class Server {
 					
 				}
 			
-				if (rPkt.getPort() != TID)
+				if (rPkt.getPort() != port)
 				{
 					System.out.println("Invalid TID, asking for retransfer");
 					byte [] errorData =createErrorMsg((byte) 5, "Invalid TID".getBytes());
