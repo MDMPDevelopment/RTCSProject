@@ -13,6 +13,8 @@ import java.util.Scanner;
 public class Server {
 	private static final String netascii = "netascii";
 	private static final String octet = "octet";
+	private static final String error4 = "Error 4: Illegal TFTP operation";
+	private static final String badTID = "Invalid TID";
 	
 	private DatagramSocket port69;
 	private byte[] mode, file;
@@ -67,8 +69,7 @@ public class Server {
 	 * @param errorMsg A more detailed message describing the error. 
 	 * @return A byte array containing the error.
 	 */
-	public byte[] createErrorMsg(byte type, byte[] errorMsg)
-	{
+	public byte[] createErrorMsg(byte type, byte[] errorMsg) {
 		byte msg[] = new byte[errorMsg.length + 5];
 		
 		msg[0] = 0x00;
@@ -94,6 +95,7 @@ public class Server {
 	 */
 	public void parsePacket() {
 		Transfer transfer;
+		int i, j;
 		
 		if (verbose) System.out.println("Parsing packet.");
 		
@@ -105,16 +107,17 @@ public class Server {
 			System.out.println();
 		}
 		
-		valid = (data.length <= 516);
+		// Valid if the packet is no longer than 516 bytes (4 byte header, 512 bytes of data).
+		valid = data.length <= 516;
+		
 		file = new byte[data.length];
 		mode = new byte[netascii.length()];
-		int i = 2;
-		int j = 0;
 		
 		valid = data[0] == 0x00 && valid;
 		valid = (data[1] == 0x01 || data[1] == 0x02) && valid;
 		
 		// Read out the filename from the request.
+		i = 2; j = 0;
 		while (data[i] != 0x00 && i < request.getLength()) {
 			file[j++] = data[i++];
 			if (verbose) System.out.print((char)file[j - 1]);
@@ -125,9 +128,8 @@ public class Server {
 		// Valid if the filename is one or more characters long and there is data after the terminating 0x00.
 		valid = i > 2 && i++ < data.length && valid;
 		
-		j = 0;
-		
 		// Read out the mode from the request.
+		j = 0;
 		while (data[i] != 0x00 && i < request.getLength() && j < netascii.length()) {
 			mode[j++] = data[i++]; 
 			if (verbose) System.out.print((char)mode[j - 1]);
@@ -135,35 +137,34 @@ public class Server {
 		
 		if (verbose) System.out.println();
 		
+		// Valid if mode is equal to either netascii or octet in any case combination.
 		valid = (new String(mode).toLowerCase().trim().equals(netascii) || new String(mode).toLowerCase().trim().equals(octet)) && valid;
-		valid = data[i] == 0x00 && valid;
+		// Valid if a read/write request and terminated with 0x00.
+		valid = ((data[1] == 0x01 || data[1] == 0x02) && data[i] == 0x00)  && valid;
 		
 		// If the packet is a valid request, start a new transfer.
 		if (valid) {
 			if (verbose) System.out.println("Valid request.  Starting transfer.");
 			
-				transfer = new Transfer(data[1] == 0x02, request, new String(file));
-				transfer.start();
-			
+			transfer = new Transfer(data[1] == 0x02, request, new String(file));
+			transfer.start();
 		} else {
-			byte [] emsg = "Error 4: Illegal TFTP operation".getBytes();
-			if (verbose) System.out.println("Error 4: Illegal TFTP operation");
+			// Invalid TFTP operation requested, send error response.
 			DatagramSocket sock;
+			
+			byte[] emsg = createErrorMsg((byte)4, error4.getBytes());
+			
+			if (verbose) System.out.println(error4);
+			
 			try {
 				sock = new DatagramSocket();
-				sock.send(new DatagramPacket(createErrorMsg((byte)4, emsg), 5 + emsg.length, request.getAddress(), request.getPort()));	//send error
+				sock.send(new DatagramPacket(emsg, 5 + emsg.length, request.getAddress(), request.getPort()));	//send error
 				sock.close();
 			} catch (SocketException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			
-		
-	
-			return;
 		}
 	}
 	
@@ -173,7 +174,7 @@ public class Server {
 	 * The UI class handles user inputs. It allows the user input to be read during transfers.
 	 */
 	private class UI extends Thread {
-		private Boolean quit;
+		private boolean quit;
 		
 		public UI () {
 			quit = false;
@@ -229,13 +230,13 @@ public class Server {
 	 * it creates a Transfer to service the request.
 	 */
 	private class Transfer extends Thread {
-		private Boolean type;
-		private DatagramSocket sock;
-		private InetAddress target;
+		private boolean type;
 		private int port;
-		private String filename;
+		private byte[] rData;
+		private DatagramSocket sock;
 		private DatagramPacket sPkt, rPkt;
-		private byte[] rData = new byte[516];
+		private InetAddress target;
+		private String filename;
 		
 		/**
 		 * Constructor for the Transfer class
@@ -244,12 +245,14 @@ public class Server {
 		 * @param filename The name of the file requested.
 		 * @param verbose Indicates whether this transfer is in verbose mode.
 		 */
-		public Transfer(Boolean type, DatagramPacket request, String filename) {
+		public Transfer(boolean type, DatagramPacket request, String filename) {
 			this.type = type;
 			this.filename = "Server/" + filename.trim();
 			
 			target = request.getAddress();
 			port = request.getPort();
+			
+			rData = new byte[516];
 			
 			try {
 				sock = new DatagramSocket();
@@ -275,6 +278,7 @@ public class Server {
 		 */
 		public void receive() {
 			rPkt = new DatagramPacket(rData, 516);
+			
 			try {
 				sock.receive(rPkt);
 			} catch (IOException e) {
@@ -289,12 +293,12 @@ public class Server {
 		private void write() throws IOException {
 			byte[] data;
 			
+			byte[] response = new byte[4];
+			byte[] block = {0x00, 0x00};
+			
 			// Opens the file to write.
 			if (verbose) System.out.println("Opening file.");
 			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(filename));
-			
-			byte[] response = new byte[4];
-			byte[] block = {0x00, 0x00};
 			
 			// Build and send the request response.
 			response[0] = 0x00;
@@ -319,50 +323,53 @@ public class Server {
 			 */
 			do {
 				receive();
-				if (verbose) {
+				if (verbose && rPkt.getData()[1] == 0x03) {
  					System.out.print("Received ");
  					System.out.println(new String(rPkt.getData()));
  					System.out.print(rPkt.getLength());
  					System.out.println(" bytes");
  					System.out.print("Opcode ");
  					System.out.println(new Integer(rPkt.getData()[1]));
+ 					System.out.print("Block ");
+ 					System.out.println(new Integer(rPkt.getData()[3]));
  					System.out.println();
  				}
-				if(rPkt.getData()[1]==5)
-				{
-					if (rPkt.getData()[3]==5)
-					{
-						System.out.println("Error sending packets, attempting to retransfer");
+				
+				if (rPkt.getPort() != port) {
+					if (verbose) System.out.println(badTID);
+					
+					byte[] errorData =createErrorMsg((byte)5, badTID.getBytes());
+					sPkt  = new DatagramPacket(errorData, errorData.length, rPkt.getAddress(), rPkt.getPort());
+					send(sPkt);
+					continue;
+				}
+				
+				// While received error packet handle error.
+				while (rPkt.getData()[1] == 0x05) {
+					if (rPkt.getData()[3] == 0x05) {
+						if (verbose) System.out.println("Acknowledge went to incorrect client, attempting to retransfer");
+						
 						send(sPkt);
 						receive();
-						if (verbose) {
-		 					System.out.print("Received ");
+						
+						if (verbose && rPkt.getData()[1] == 0x03) {
+							System.out.print("Received ");
 		 					System.out.println(new String(rPkt.getData()));
 		 					System.out.print(rPkt.getLength());
 		 					System.out.println(" bytes");
 		 					System.out.print("Opcode ");
 		 					System.out.println(new Integer(rPkt.getData()[1]));
+		 					System.out.print("Block ");
+		 					System.out.println(new Integer(rPkt.getData()[3]));
 		 					System.out.println();
 		 				}
+					} else if (rPkt.getData()[3] == 0x04) {
+						byte[] errorMsg = new byte[rPkt.getLength()];
+						System.arraycopy(rPkt.getData(), 4, errorMsg, 0, rPkt.getLength() - 5);
+						if (verbose) System.out.println("Error code 4, Invalid TFTP Operation");
+						System.out.println(new String(errorMsg));
+						quit();
 					}
-					
-				}
-				if (rPkt.getPort() != port)
-				{
-					System.out.println("Invalid TID, asking for retransfer");
-					byte [] errorData =createErrorMsg((byte) 5, "Invalid TID".getBytes());
-					sPkt  = new DatagramPacket (errorData, errorData.length, target, port);
-					send(sPkt);
-					receive();
-					if (verbose) {
-	 					System.out.print("Received ");
-	 					System.out.println(new String(rPkt.getData()));
-	 					System.out.print(rPkt.getLength());
-	 					System.out.println(" bytes");
-	 					System.out.print("Opcode ");
-	 					System.out.println(new Integer(rPkt.getData()[1]));
-	 					System.out.println();
-	 				}
 				}
 				
 				if (++block[1] == 0) block[0]++;
@@ -371,10 +378,11 @@ public class Server {
 				System.arraycopy(rPkt.getData(), 4, data, 0, rPkt.getLength() - 4);
 				
 				if (verbose) {
-					 					System.out.print("Output ");
-										System.out.println(new String(data));
-					 					System.out.println();
-					 				}
+					System.out.print("Output ");
+					System.out.println(new String(data));
+					System.out.println();
+				}
+				
 				out.write(data, 0, data.length);
 				out.flush();
 				
