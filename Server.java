@@ -345,7 +345,7 @@ public class Server {
 					continue;
 				}
 				
-				// While received error packet handle error.
+				// While received error packet, handle error.
 				while (rPkt.getData()[1] == 0x05) {
 					if (rPkt.getData()[3] == 0x05) {
 						if (verbose) System.out.println("Acknowledge went to incorrect client, attempting to retransfer");
@@ -410,7 +410,7 @@ public class Server {
 			} while (rPkt.getLength() == 516);
 			
 			out.close();
-			if (verbose) System.out.println("Finished write.");
+			System.out.println("Finished write.");
 		}
 		
 		/**
@@ -420,21 +420,32 @@ public class Server {
 		private void read() throws IOException {
 			int sizeRead;
 			byte[] response;
-			byte[] block = {0x00, 0x00};
 			byte[] data = new byte[512];
+			byte[] block = {0x00, 0x00};
 			
+			//Opens file to read.
 			if (verbose) System.out.println("Opening file.");
 			BufferedInputStream in = new BufferedInputStream(new FileInputStream(filename));
 			
+			//Read in first 512 byte block.
 			sizeRead = in.read(data);
 			
 			if (verbose) System.out.println("Starting read.");
+			
+			/*
+			 * While the end of the file hasn't been reached:
+			 *   - Increment the block number
+			 *   - Build and send the data packet
+			 *   - Wait for the acknowledge
+			 *   - Read in the next 512 byte block of data
+			 */
 			while (sizeRead != -1) {
 				if (++block[1] == 0) block[0]++;
 				
 				if (verbose) System.out.print("Read ");
 				if (verbose) System.out.println(new String(data));
 				
+				//Build the data packet.
 				response = new byte[sizeRead + 4];
 				
 				response[0] = 0x00;
@@ -443,58 +454,64 @@ public class Server {
 				System.arraycopy(data, 0, response, 4, sizeRead);
 				
 				if (verbose) {
-					 					System.out.print("Sent ");
-					 				System.out.println(new String(response));
-					 					System.out.print("Opcode ");
-					 					System.out.println(new Integer(response[1]));
-					 					System.out.println();
-					 				}
+					System.out.print("Sent ");
+					System.out.println(new String(response));
+					System.out.print("Opcode ");
+					System.out.println(new Integer(response[1]));
+					System.out.println();
+				}
 				
 				sPkt = new DatagramPacket(response, sizeRead + 4, target, port);
 				send(sPkt);
 				receive();
+				
 				if (verbose) {
-					 					System.out.print("Received ");
-					 				System.out.println(new String(rPkt.getData()));
-					 					System.out.print("Opcode ");
-					 					System.out.println(new Integer(rPkt.getData()[1]));
-					 					System.out.println();
-					 				}
-				if(rPkt.getData()[1]==5)
-				{
-					if (rPkt.getData()[3]==5)
-					{
-						System.out.println("Error sending packets, attempting to retransfer");
+					System.out.print("Received ");
+					System.out.println(new String(rPkt.getData()));
+					System.out.print("Opcode ");
+					System.out.println(new Integer(rPkt.getData()[1]));
+					System.out.println();
+				}
+				
+				//Response came from an unknown source.
+				if (!rPkt.getAddress().equals(target) || rPkt.getPort() != port) {
+					if (verbose) System.out.println(badTID);
+					
+					byte[] errorData =createErrorMsg((byte) 5, badTID.getBytes());
+					sPkt  = new DatagramPacket (errorData, errorData.length, rPkt.getAddress(), rPkt.getPort());
+					send(sPkt);
+				}
+				
+				// While received error packet, handle error.
+				while (rPkt.getData()[1] == 5) {
+					if (rPkt.getData()[3]==5) {
+						System.out.println("Data sent to incorrect client, attempting to retransfer");
 						send(sPkt);
 						receive();
+						
 						if (verbose) {
 		 					System.out.print("Received ");
-		 				System.out.println(new String(rPkt.getData()));
+		 					System.out.println(new String(rPkt.getData()));
 		 					System.out.print("Opcode ");
 		 					System.out.println(new Integer(rPkt.getData()[1]));
 		 					System.out.println();
 		 				}
+					} else if (rPkt.getData()[3] == 0x04) {
+						// Invalid TFTP operation. Unrecoverable by definition.
+						byte[] errorMsg = new byte[rPkt.getLength()];
+						
+						System.arraycopy(rPkt.getData(), 4, errorMsg, 0, rPkt.getLength() - 5);
+						
+						if (verbose) System.out.println("Error code 4, Invalid TFTP Operation");
+						System.out.println(new String(errorMsg));
+						
+						quit();
 					}
-					
 				}
-			
-				if (rPkt.getPort() != port)
-				{
-					System.out.println("Invalid TID, asking for retransfer");
-					byte [] errorData =createErrorMsg((byte) 5, "Invalid TID".getBytes());
-					sPkt  = new DatagramPacket (errorData, errorData.length, target, port);
-					send(sPkt);
-					receive();
-					if (verbose) {
-	 					System.out.print("Received ");
-	 				System.out.println(new String(rPkt.getData()));
-	 					System.out.print("Opcode ");
-	 					System.out.println(new Integer(rPkt.getData()[1]));
-	 					System.out.println();
-	 				}
-				}
+				
 				sizeRead = in.read(data);
 			}
+			
 			in.close();
 			if (verbose) System.out.println("Finished read.");
 		}
