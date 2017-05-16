@@ -14,6 +14,7 @@ public class Host {
 	private static final int CHANGELENGTH = 2;
 	private static final int CHANGETIDSERVER = 3;
 	private static final int CHANGETIDCLIENT = 4;
+	private static final int CHANGEOPCODEv = 5;
 	
 	private boolean first, firstreply, verbose, reset;
 	private int targetPort, returnPort, test, errorReq;
@@ -61,8 +62,8 @@ public class Host {
 	private byte[] changeOpcode(DatagramPacket pkt)
 	{
 		byte[] data = pkt.getData();
-		data[0] = 1;
-			data[1] = 5;	
+		data[0] = errorReq == CHANGEOPCODE ? (byte)1 : (byte)0;
+		data[1] = errorReq == CHANGEOPCODE ? (byte)5 : (byte)4;	
 		return data;
 		
 	}
@@ -138,7 +139,7 @@ public class Host {
 		
 		receive(rcvPkt1, port23);
 		
-		if (errorReq == CHANGEOPCODE) {
+		if (errorReq == CHANGEOPCODE || errorReq == CHANGEOPCODEv) {
 			byte[] data = changeOpcode(rcvPkt1);
 			rcvPkt1.setData(data);
 			errorReq = NORMAL;
@@ -301,25 +302,28 @@ public class Host {
 							  break;
 					case 'r': reset = true;
 							  break;
-					case 'e' : listErrors();
+					case 'e': listErrors();
 							  break;
-					case '1' :	 errorReq = CHANGEOPCODE;
+					case '1': errorReq = CHANGEOPCODE;
 							  break;
-					case '2' : errorReq = CHANGELENGTH;
+					case '2': errorReq = CHANGELENGTH;
 							  break;
 					case '3': errorReq = CHANGETIDSERVER;
 							  break;
 					case '4': errorReq = CHANGETIDCLIENT;
+							  break;
+					case '5': errorReq = CHANGEOPCODEv;
 							  break;
 				}
 			}
 		}
 		
 		public void listErrors() {
-			System.out.println("1 - Change Opcode");
+			System.out.println("1 - Change Opcode (invalid opcode)");
 			System.out.println("2 - Change Length");
 			System.out.println("3 - Change Transfer ID of server");
 			System.out.println("4 - Change Transfer ID of client.");
+			System.out.println("5 - Change Opcode (valid opcode)");
 		}
 		
 		public void run() {
