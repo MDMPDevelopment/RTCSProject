@@ -14,18 +14,13 @@ public class Host {
 	private static final int CHANGELENGTH = 2;
 	private static final int CHANGETIDSERVER = 3;
 	private static final int CHANGETIDCLIENT = 4;
-	Boolean first;
-	Boolean firstreply;
+	
+	private boolean first, firstreply, verbose, reset;
+	private int targetPort, returnPort, test, errorReq;
 	private DatagramSocket port23, sndRcvSok, sndSok;
 	private DatagramPacket rcvPkt1, rcvPkt2, sndPkt;
 	private InetAddress target1, target2;
-	private int targetPort;
-	private int returnPort;
-	private int test;
-	private Boolean verbose;
-	private Boolean transfer;
-	private Boolean reset;
-	private int errorReq;
+	
 	public Host() {
 		try {
 			port23 = new DatagramSocket(23);
@@ -39,7 +34,6 @@ public class Host {
 		}
 				
 		verbose = false;
-		transfer = false;
 		reset = false;
 		first = true;
 		firstreply=true;
@@ -106,41 +100,26 @@ public class Host {
 	}
 	
 	/**
-	 * Prints out the data buffer from pkt as bytes and as a String.
-	 * @param pkt
-	 */
-	private void printData(DatagramPacket pkt) {
-		try {
-			System.out.write(pkt.getData());
-			System.out.println();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		
-		System.out.println(new String(pkt.getData()));
-	}
-	
-	/**
 	 * Closes the sockets and exits.
 	 */
 	private void quit() {
-		 		if (verbose) System.out.println("Closing port 23");
-		  		port23.close();
-		 		if (verbose) System.out.println("Closing sndSok");
-		  		sndSok.close();
-		 		if (verbose) System.out.println("Closing sndRcvSok");
-		  		sndRcvSok.close();
+		if (verbose) System.out.println("Closing port 23");
+		port23.close();
+		if (verbose) System.out.println("Closing sndSok");
+		sndSok.close();
+		if (verbose) System.out.println("Closing sndRcvSok");
+		sndRcvSok.close();
 		
-		 		System.out.println("Exit succesful.");
-		  		System.exit(0);
-		  	}
-	
-	private void getTest() {
-		
+		System.out.println("Exiting");
+		System.exit(0);
 	}
 	
-	public Boolean isReset() {
-		Boolean reset = this.reset;
+	private int getTest() {
+		return this.test;
+	}
+	
+	public boolean isReset() {
+		boolean reset = this.reset;
 		this.reset = false;
 		
 		return reset;
@@ -158,23 +137,23 @@ public class Host {
 		if (verbose) System.out.println(port23.getLocalPort());
 		
 		receive(rcvPkt1, port23);
-		if (errorReq ==CHANGEOPCODE)
-		{
-			byte [] data = changeOpcode(rcvPkt1);
+		
+		if (errorReq == CHANGEOPCODE) {
+			byte[] data = changeOpcode(rcvPkt1);
 			rcvPkt1.setData(data);
-			errorReq=NORMAL;
-		}else if(errorReq == CHANGELENGTH)
-		{
-			byte [] data = changeLength(rcvPkt1);
+			errorReq = NORMAL;
+		} else if (errorReq == CHANGELENGTH) {
+			byte[] data = changeLength(rcvPkt1);
 			rcvPkt1.setData(data);
 			errorReq = CHANGELENGTH;
 		}
+		
 		if (verbose) {
-			 System.out.println("Client ");
-			 System.out.print("Opcode ");
-			 System.out.println(new Integer(rcvPkt1.getData()[1]));
-			 System.out.println(new String(rcvPkt1.getData()));
-			 		}
+			System.out.println("Client ");
+			System.out.print("Opcode ");
+			System.out.println(new Integer(rcvPkt1.getData()[1]));
+			System.out.println(new String(rcvPkt1.getData()));
+		}
 	}
 	
 	/**
@@ -191,11 +170,11 @@ public class Host {
 		receive(rcvPkt1, sndSok);
 		
 		if (verbose) {
-			 			System.out.println("Client ");
-			 			System.out.print("Opcode ");
-			 			System.out.println(new Integer(rcvPkt1.getData()[1]));
-			 		System.out.println(new String(rcvPkt1.getData()));
-			 		}
+			System.out.println("Client ");
+			System.out.print("Opcode ");
+			System.out.println(new Integer(rcvPkt1.getData()[1]));
+			System.out.println(new String(rcvPkt1.getData()));
+		}
 	}
 	
 	/**
@@ -211,11 +190,11 @@ public class Host {
 		
 		receive(rcvPkt2, sndRcvSok);
 		if (verbose) {
-			 			System.out.println("Server ");
-			 			System.out.print("Opcode ");
-			 			System.out.println(new Integer(rcvPkt2.getData()[1]));
-			 			System.out.println(new String(rcvPkt2.getData()));
-			 		}
+			System.out.println("Server ");
+			System.out.print("Opcode ");
+			System.out.println(new Integer(rcvPkt2.getData()[1]));
+			System.out.println(new String(rcvPkt2.getData()));
+		}
 	}
 	
 	/**
@@ -239,15 +218,13 @@ public class Host {
 				send(sndPkt, errorSocket);
 				errorSocket.close();
 				errorReq = NORMAL;
-				
 			} catch (SocketException e) {
 				
 			}
-		} else 
-			{ 
+		} else { 
 			send(sndPkt, sndRcvSok);
 			first=false;
-			}
+		}
 	}
 	
 	/**
@@ -269,12 +246,10 @@ public class Host {
 				System.out.println("New port: " + errorSocket.getLocalPort());
 				errorSocket.close();
 				errorReq = NORMAL;
-				
 			} catch (SocketException e) {
 				
 			}
-		} else 
-			{
+		} else {
 			send(sndPkt, sndSok);
 			firstreply = false;
 		}
@@ -339,12 +314,14 @@ public class Host {
 				}
 			}
 		}
-		public void listErrors(){
+		
+		public void listErrors() {
 			System.out.println("1 - Change Opcode");
 			System.out.println("2 - Change Length");
 			System.out.println("3 - Change Transfer ID of server");
 			System.out.println("4 - Change Transfer ID of client.");
 		}
+		
 		public void run() {
 			try {
 				this.ui();
