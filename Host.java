@@ -238,7 +238,6 @@ public class Host {
 		sndPkt = new DatagramPacket(rcvPkt2.getData(), rcvPkt2.getLength(), target2, returnPort);
 
 		targetPort = rcvPkt2.getPort();
-		System.out.println(firstreply);
 		if (errorReq == CHANGETIDSERVER && !firstreply) {
 			try {
 				errorSocket = new DatagramSocket();
