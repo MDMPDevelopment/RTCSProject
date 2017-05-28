@@ -3,6 +3,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -17,7 +18,7 @@ public class Server {
 	private static final String error4 = "Error 4: Illegal TFTP operation";
 	private static final String badTID = "Invalid TID";
 	public static final String diskFull ="Disk full or allocation exceeded";
-	
+	public static final String fileExists="File already exists on server";
 	private DatagramSocket port69;
 	private byte[] mode, file;
 	
@@ -300,8 +301,21 @@ public class Server {
 			
 			// Opens the file to write.
 			if (verbose) System.out.println("Opening file.");
-			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(filename));
+			File writeFile = new File(filename);
+			BufferedOutputStream out=null;
+			if (writeFile.exists()){
+				byte[] errorData =createErrorMsg((byte) 6,fileExists .getBytes());
+				
+				if(verbose){System.out.println("File already exists. Sending error to client.");}
+						sPkt  = new DatagramPacket (errorData, errorData.length, target, port);
+						
+						send(sPkt);
+						
+						quit();
 			
+			}else{
+			out = new BufferedOutputStream(new FileOutputStream(filename));
+			}
 			// Build and send the request response.
 			response[0] = 0x00;
 			response[1] = 0x04;
