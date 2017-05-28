@@ -1,4 +1,5 @@
 
+
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.io.BufferedInputStream;
@@ -19,6 +20,7 @@ public class Server {
 	private static final String badTID = "Invalid TID";
 	public static final String diskFull ="Disk full or allocation exceeded";
 	public static final String fileExists="File already exists on server";
+	public static final String accessDenied="File access is deiend, check permissions.";
 	private DatagramSocket port69;
 	private byte[] mode, file;
 	
@@ -314,7 +316,17 @@ public class Server {
 						quit();
 			
 			}else{
+				try{
 			out = new BufferedOutputStream(new FileOutputStream(filename));
+				}catch (FileNotFoundException e){
+					if(verbose) System.out.println("Access denied to folder, sending error to client");
+					byte[] errorData =createErrorMsg((byte) 2 ,accessDenied .getBytes());
+					sPkt  = new DatagramPacket (errorData, errorData.length, target, port);
+					
+					send(sPkt);
+					
+					quit();
+				}
 			}
 			// Build and send the request response.
 			response[0] = 0x00;
