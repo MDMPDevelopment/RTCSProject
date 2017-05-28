@@ -16,6 +16,7 @@ public class Server {
 	private static final String octet = "octet";
 	private static final String error4 = "Error 4: Illegal TFTP operation";
 	private static final String badTID = "Invalid TID";
+	public static final String diskFull ="Disk full or allocation exceeded";
 	
 	private DatagramSocket port69;
 	private byte[] mode, file;
@@ -390,9 +391,24 @@ public class Server {
 					System.out.println(new String(data));
 					System.out.println();
 				}
+				try{
+					out.write(data, 0, data.length);
+					out.flush();
+				}
+				catch (IOException e1) {
+					
 				
-				out.write(data, 0, data.length);
-				out.flush();
+					byte[] errorData =createErrorMsg((byte) 3,diskFull .getBytes());
+					
+			if(verbose){System.out.println("Disk full. Sending error to client.");}
+					sPkt  = new DatagramPacket (errorData, errorData.length, target, port);
+					
+					send(sPkt);
+					
+					quit();
+					
+				}
+				
 				
 				// Build and send acknowledge packet.
 				response = new byte[4];
@@ -433,7 +449,7 @@ public class Server {
 			{
 				String fileNotFound = "File: " + filename + " was not found on the server.";
 				
-				byte[] errorData =createErrorMsg((byte) 2 ,fileNotFound .getBytes());
+				byte[] errorData =createErrorMsg((byte) 1 ,fileNotFound .getBytes());
 				
 		if(verbose){System.out.println("Server could not find file. Sending error");}
 				sPkt  = new DatagramPacket (errorData, errorData.length, target, port);
