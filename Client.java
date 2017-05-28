@@ -1,6 +1,7 @@
 import java.net.DatagramSocket;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -149,7 +150,7 @@ public class Client {
 		sndPkt = new DatagramPacket(request, request.length, target, test ? 23 : 69);
 		send();
 		receive();
-
+		
 		// Set the destination port and address based on the request response.
 		port = rcvPkt.getPort();
 		target = rcvPkt.getAddress();
@@ -165,7 +166,16 @@ public class Client {
 			System.out.println(new String(rcvPkt.getData()));
 			System.out.println();
 		}
-
+		if(rcvPkt.getData()[3] == 6)
+		{
+			byte[] errorMsg = new byte[rcvPkt.getLength()];
+			
+			System.arraycopy(rcvPkt.getData(), 4, errorMsg, 0, rcvPkt.getLength() - 5);
+			if (verbose) System.out.println("Error code 6, file exists on server");
+			System.out.println("File already exists.");
+			
+			quit();
+		}
 		// Read in up to 512 bytes of data.
 		sizeRead = in.read(data);
 
@@ -273,6 +283,7 @@ public class Client {
 							System.out.println(errorMsg);
 							quit();
 						}
+					
 				}
 			
 
@@ -295,12 +306,21 @@ public class Client {
 		Boolean first = true;
 
 		// Prompt the user to select a file to read, then open and/or create the file to write to.
-		String file = pickFile();
+		String filename = pickFile();
 		if (verbose) System.out.println("Opening file.");
-		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream("Client/" + file));
-
+		File readFile= new File("Client/" +filename);
+		
+		BufferedOutputStream out=null;
+	
+		if (readFile.exists()){
+			System.out.println("File already exists");
+			if (verbose){System.out.println("File already exists in Client");}
+			quit();
+		}else{
+		 out = new BufferedOutputStream(new FileOutputStream("Client/" + filename));
+		}
 		// Build the data buffer for the RRQ.
-		byte[] request = buildRQ(file, readReq);
+		byte[] request = buildRQ(filename, readReq);
 
 		// Hold the block number and opcode.  The block number starts at zero to simplify the increment logic.
 		byte[] block = {0x00, 0x00};
@@ -392,6 +412,7 @@ public class Client {
 					
 					quit();
 				}
+				
 			}
 
 			if (++block[1] == 0) block[0]++;
