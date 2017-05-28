@@ -15,6 +15,7 @@ public class Server {
 	private static final String octet = "octet";
 	private static final String error4 = "Error 4: Illegal TFTP operation";
 	private static final String badTID = "Invalid TID";
+	private static final int timeout_ms = 500;
 	
 	private DatagramSocket port69;
 	private byte[] mode, file;
@@ -26,6 +27,7 @@ public class Server {
 	public Server() {
 		try {
 			port69 = new DatagramSocket(69);
+			port69.setSoTimeout(timeout_ms);
 		} catch (SocketException e) {
 			e.printStackTrace();
 		}
@@ -256,6 +258,7 @@ public class Server {
 			
 			try {
 				sock = new DatagramSocket();
+				sock.setSoTimeout(timeout_ms);
 			} catch (SocketException e) {
 				e.printStackTrace();
 			}

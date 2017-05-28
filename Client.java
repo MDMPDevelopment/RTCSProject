@@ -14,6 +14,7 @@ import java.util.Scanner;
 public class Client {
 	private static final byte readReq = 0x01;
 	private static final byte writeReq = 0x02;
+	private static final int timeout_ms = 500;
 	private static final String mode = "octet";
 	private static final String badTID = "Invalid TID";
 
@@ -32,7 +33,13 @@ public class Client {
 		test = false;
 		verbose = false;
 
-		sock = new DatagramSocket();
+		try {
+			sock = new DatagramSocket();
+			sock.setSoTimeout(timeout_ms);
+		} catch (SocketException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		}
 
 		new UI().start();
 	}
