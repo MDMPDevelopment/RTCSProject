@@ -1,3 +1,5 @@
+
+
 import java.net.DatagramSocket;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -143,7 +145,8 @@ public class Client {
 		in = new BufferedInputStream(new FileInputStream("Client/" + file));
 		}catch (FileNotFoundException e) 
 		{
-			System.out.println("File name " + file + " could not be found. Please check permissions or spelling.");
+			System.out.println("File name " + file + " could not be found.");
+			quit();
 		}
 		// Build the WRQ packet from the request array.
 		if (verbose) System.out.println("Sending request.");
@@ -166,6 +169,8 @@ public class Client {
 			System.out.println(new String(rcvPkt.getData()));
 			System.out.println();
 		}
+		if(rcvPkt.getData()[1] == 5){
+		
 		if(rcvPkt.getData()[3] == 6)
 		{
 			byte[] errorMsg = new byte[rcvPkt.getLength()];
@@ -175,6 +180,16 @@ public class Client {
 			System.out.println("File already exists.");
 			
 			quit();
+		}
+		if(rcvPkt.getData()[3] == 2)
+		{
+			byte[] errorMsg = new byte[rcvPkt.getLength()];
+			
+			System.arraycopy(rcvPkt.getData(), 4, errorMsg, 0, rcvPkt.getLength() - 5);
+			if (verbose) System.out.println("Error code 2, access denied.");
+			System.out.println(errorMsg);
+			quit();
+		}
 		}
 		// Read in up to 512 bytes of data.
 		sizeRead = in.read(data);
@@ -228,8 +243,9 @@ public class Client {
 				send();
 				//receive?
 			}
-
+			
 			if(rcvPkt.getData()[1]==5) {
+
 				if (rcvPkt.getData()[3]==5) {
 					System.out.println("Data sent to incorrect server, attempting to retransfer");
 					
@@ -265,6 +281,8 @@ public class Client {
 						
 						quit();
 					}
+					 System.out.println(rcvPkt.getData()[3]);
+					 
 					 if(rcvPkt.getData()[3] == 1)
 					{
 						byte[] errorMsg = new byte[rcvPkt.getLength()];
@@ -274,7 +292,7 @@ public class Client {
 						System.out.println(errorMsg);
 						quit();
 					}
-					if(rcvPkt.getData()[3] == 3)
+					 if(rcvPkt.getData()[3] == 3)
 						{
 							byte[] errorMsg = new byte[rcvPkt.getLength()];
 							
@@ -317,7 +335,15 @@ public class Client {
 			if (verbose){System.out.println("File already exists in Client");}
 			quit();
 		}else{
-		 out = new BufferedOutputStream(new FileOutputStream("Client/" + filename));
+		
+			try{
+			out = new BufferedOutputStream(new FileOutputStream("Client/" + filename));
+			}catch (FileNotFoundException e) 
+			{
+				System.out.println("Folder access denied.");
+				quit();
+			}
+		 
 		}
 		// Build the data buffer for the RRQ.
 		byte[] request = buildRQ(filename, readReq);
