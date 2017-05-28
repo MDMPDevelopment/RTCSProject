@@ -4,6 +4,7 @@ import java.net.InetAddress;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -38,7 +39,7 @@ public class Server {
 	
 	/**
 	 * Closes the port and exits. Outstanding transfers will run to completion.
-	 */
+	 */ 
 	private void quit() {
 		if (verbose) System.out.println("Closing port 69.");
 		port69.close();
@@ -425,8 +426,23 @@ public class Server {
 			
 			//Opens file to read.
 			if (verbose) System.out.println("Opening file.");
-			BufferedInputStream in = new BufferedInputStream(new FileInputStream(filename));
-			
+			BufferedInputStream in= null;
+			try{
+			in = new BufferedInputStream(new FileInputStream(filename));
+			}catch (FileNotFoundException e)
+			{
+				String fileNotFound = "File: " + filename + " was not found on the server.";
+				
+				byte[] errorData =createErrorMsg((byte) 2 ,fileNotFound .getBytes());
+				
+		if(verbose){System.out.println("Server could not find file. Sending error");}
+				sPkt  = new DatagramPacket (errorData, errorData.length, target, port);
+				
+				send(sPkt);
+				
+				quit();
+				
+			}
 			//Read in first 512 byte block.
 			sizeRead = in.read(data);
 			
