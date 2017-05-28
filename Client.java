@@ -235,7 +235,6 @@ public class Client {
 
 					send();
 					receive(); 
-				}
 					if (verbose) {
 						System.out.println("Received packet");
 						System.out.print("Opcode ");
@@ -243,6 +242,8 @@ public class Client {
 						System.out.println(new String(rcvPkt.getData()));
 						System.out.println();
 					}
+				}
+					
 					 if (rcvPkt.getData()[3] == 0x04) {
 						// Invalid TFTP operation. Unrecoverable by definition.
 						byte[] errorMsg = new byte[rcvPkt.getLength()];
@@ -254,16 +255,24 @@ public class Client {
 						
 						quit();
 					}
-					 if(rcvPkt.getData()[3] == 2)
+					 if(rcvPkt.getData()[3] == 1)
 					{
 						byte[] errorMsg = new byte[rcvPkt.getLength()];
 						
 						System.arraycopy(rcvPkt.getData(), 4, errorMsg, 0, rcvPkt.getLength() - 5);
-						if (verbose) System.out.println("Error code 2, Access Violation");
+						if (verbose) System.out.println("Error code 1, file not found");
 						System.out.println(errorMsg);
 						quit();
 					}
-				
+					if(rcvPkt.getData()[3] == 3)
+						{
+							byte[] errorMsg = new byte[rcvPkt.getLength()];
+							
+							System.arraycopy(rcvPkt.getData(), 4, errorMsg, 0, rcvPkt.getLength() - 5);
+							if (verbose) System.out.println("Error code 3, disk full");
+							System.out.println(errorMsg);
+							quit();
+						}
 				}
 			
 
@@ -378,7 +387,7 @@ public class Client {
 					byte[] errorMsg = new byte[rcvPkt.getLength()];
 					
 					System.arraycopy(rcvPkt.getData(), 4, errorMsg, 0, rcvPkt.getLength() - 5);
-					if (verbose) System.out.println("Error code 2, Access Violation");
+					if (verbose) System.out.println("Error code 1, file not found");
 					System.out.println("Could not find specified file on server.");
 					
 					quit();
