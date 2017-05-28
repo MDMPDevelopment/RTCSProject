@@ -1,10 +1,10 @@
-
 import java.net.DatagramSocket;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Scanner;
+import java.util.concurrent.TimeUnit;
 import java.net.SocketException;
 
 public class Host {
@@ -15,9 +15,11 @@ public class Host {
 	private static final int CHANGETIDSERVER = 3;
 	private static final int CHANGETIDCLIENT = 4;
 	private static final int CHANGEOPCODEv = 5;
-
+	private static final int DELAYTOSERVER = 6;
+	private static final int DELAYTOCLIENT = 7;
+	
 	private boolean first, firstreply, verbose, reset;
-	private int targetPort, returnPort, test, errorReq;
+	private int targetPort, returnPort, test, errorReq,delay, packetNum;
 	private DatagramSocket port23, sndRcvSok, sndSok;
 	private DatagramPacket rcvPkt1, rcvPkt2, sndPkt;
 	private InetAddress target1, target2;
@@ -117,7 +119,15 @@ public class Host {
 	private int getTest() {
 		return this.test;
 	}
+	private void delay(int ms){
+		try {
+		Thread.sleep(ms);
+		} catch (InterruptedException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+		}
 
+	}
 	public boolean isReset() {
 		boolean reset = this.reset;
 		this.reset = false;
@@ -222,6 +232,16 @@ public class Host {
 
 			}
 		} else { 
+			if(errorReq == DELAYTOSERVER){
+				packetNum--;
+				if (packetNum ==0){
+					
+						delay(delay);
+			
+				errorReq=NORMAL;
+				}
+			}
+		
 			send(sndPkt, sndRcvSok);
 			first=false;
 		}
@@ -238,6 +258,7 @@ public class Host {
 		sndPkt = new DatagramPacket(rcvPkt2.getData(), rcvPkt2.getLength(), target2, returnPort);
 
 		targetPort = rcvPkt2.getPort();
+		
 		if (errorReq == CHANGETIDSERVER && !firstreply) {
 			try {
 				errorSocket = new DatagramSocket();
@@ -249,6 +270,15 @@ public class Host {
 
 			}
 		} else {
+			if(errorReq == DELAYTOCLIENT){
+				packetNum--;
+				if (packetNum ==0){
+					
+				delay(delay);
+				
+				errorReq=NORMAL;
+				}
+			}
 			send(sndPkt, sndSok);
 			firstreply = false;
 		}
@@ -312,16 +342,31 @@ public class Host {
 							  break;
 					case '5': errorReq = CHANGEOPCODEv;
 							  break;
+					case '6': errorReq = DELAYTOSERVER;
+							askForParameters();
+							break;
+					case '7': errorReq = DELAYTOCLIENT;
+							askForParameters();
+							break;
 				}
 			}
 		}
-
+		public void askForParameters(){
+			System.out.println("How much delay (in ms)?");
+			Scanner input = new Scanner(System.in);
+			delay = input.nextInt();
+			System.out.println("Which packet #?");
+			packetNum = input.nextInt();
+			
+		}
 		public void listErrors() {
 			System.out.println("1 - Change Opcode (invalid opcode)");
 			System.out.println("2 - Change Length");
 			System.out.println("3 - Change Transfer ID of server");
 			System.out.println("4 - Change Transfer ID of client.");
 			System.out.println("5 - Change Opcode (valid opcode)");
+			System.out.println("6 - Delay transfer to Server");
+			System.out.println("7 - Delay transfer to Client");
 		}
 
 		public void run() {
