@@ -16,7 +16,7 @@ public class Client {
 	private static final byte writeReq = 0x02;
 	private static final String mode = "octet";
 	private static final String badTID = "Invalid TID";
-
+	private static final String diskFull ="Disk full, cannot continue read";
 	private byte[] rData;
 
 	private DatagramSocket sock;
@@ -398,8 +398,22 @@ public class Client {
 
 			data = new byte[rcvPkt.getLength() - 4];
 			System.arraycopy(rcvPkt.getData(), 4, data, 0, data.length);
-			out.write(data, 0, data.length);
-			out.flush();
+			try{
+				out.write(data, 0, data.length);
+				out.flush();
+			}
+			catch (IOException e1) {
+				
+				System.out.println(diskFull);
+				if (verbose){System.out.println("Error code 3, sending to server");}
+				
+				
+				byte[] errorData =createErrorMsg((byte) 3, diskFull.getBytes());
+				sndPkt = new DatagramPacket (errorData, errorData.length, target, port);
+				
+				send();
+				quit();
+			}
 
 			request = new byte[4];
 			System.arraycopy(opcode, 0, request, 0, 2);
