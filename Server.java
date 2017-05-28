@@ -528,7 +528,8 @@ public class Server {
 		 					System.out.println(new Integer(rPkt.getData()[1]));
 		 					System.out.println();
 		 				}
-					} else if (rPkt.getData()[3] == 0x04) {
+					} 
+					if (rPkt.getData()[3] == 0x04) {
 						// Invalid TFTP operation. Unrecoverable by definition.
 						byte[] errorMsg = new byte[rPkt.getLength()];
 						
@@ -537,6 +538,15 @@ public class Server {
 						if (verbose) System.out.println("Error code 4, Invalid TFTP Operation");
 						System.out.println(new String(errorMsg));
 						
+						quit();
+					}
+					if(rPkt.getData()[3] == 3)
+					{
+						byte[] errorMsg = new byte[rPkt.getLength()];
+						
+						System.arraycopy(rPkt.getData(), 4, errorMsg, 0, rPkt.getLength() - 5);
+						if (verbose) System.out.println("Error code 3, disk full");
+						System.out.println(errorMsg);
 						quit();
 					}
 				}
