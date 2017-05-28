@@ -2,6 +2,7 @@ import java.net.DatagramSocket;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -136,8 +137,13 @@ public class Client {
 
 		// Opens the file selected for reading.
 		if (verbose) System.out.println("Opening file.");
-		BufferedInputStream in = new BufferedInputStream(new FileInputStream("Client/" + file));
-
+		BufferedInputStream in = null;
+		try{
+		in = new BufferedInputStream(new FileInputStream("Client/" + file));
+		}catch (FileNotFoundException e) 
+		{
+			System.out.println("File name " + file + " could not be found. Please check permissions or spelling.");
+		}
 		// Build the WRQ packet from the request array.
 		if (verbose) System.out.println("Sending request.");
 		sndPkt = new DatagramPacket(request, request.length, target, test ? 23 : 69);
@@ -210,6 +216,7 @@ public class Client {
 				sndPkt = new DatagramPacket (errorData, errorData.length, target, port);
 				
 				send();
+				//receive?
 			}
 
 			if(rcvPkt.getData()[1]==5) {
@@ -228,14 +235,15 @@ public class Client {
 
 					send();
 					receive(); 
-
+				}
 					if (verbose) {
 						System.out.println("Received packet");
 						System.out.print("Opcode ");
 						System.out.println(new Integer(rcvPkt.getData()[1]));
 						System.out.println(new String(rcvPkt.getData()));
 						System.out.println();
-					} else if (rcvPkt.getData()[3] == 0x04) {
+					}
+					 if (rcvPkt.getData()[3] == 0x04) {
 						// Invalid TFTP operation. Unrecoverable by definition.
 						byte[] errorMsg = new byte[rcvPkt.getLength()];
 						
@@ -246,8 +254,18 @@ public class Client {
 						
 						quit();
 					}
+					 if(rcvPkt.getData()[3] == 2)
+					{
+						byte[] errorMsg = new byte[rcvPkt.getLength()];
+						
+						System.arraycopy(rcvPkt.getData(), 4, errorMsg, 0, rcvPkt.getLength() - 5);
+						if (verbose) System.out.println("Error code 2, Access Violation");
+						System.out.println(errorMsg);
+						quit();
+					}
+				
 				}
-			}
+			
 
 			if (++block[1] == 0) block[0]++;
 
@@ -325,6 +343,8 @@ public class Client {
 				sndPkt = new DatagramPacket (errorData, errorData.length, target, port);
 				
 				send();
+				//change so it received?
+				
 			}
 
 			if(rcvPkt.getData()[1]==5) {
@@ -333,21 +353,33 @@ public class Client {
 
 					send();
 					receive();
-
+				
 					if (verbose) {
 						System.out.println("Received packet");
 						System.out.print("Opcode ");
 						System.out.println(new Integer(rcvPkt.getData()[1]));
 						System.out.println(new String(rcvPkt.getData()));
 					}
-				} else if (rcvPkt.getData()[3] == 0x04) {
+				}
+				if (rcvPkt.getData()[3] == 0x04) {
 					// Invalid TFTP operation. Unrecoverable by definition.
 					byte[] errorMsg = new byte[rcvPkt.getLength()];
 					
 					System.arraycopy(rcvPkt.getData(), 4, errorMsg, 0, rcvPkt.getLength() - 5);
 					
 					if (verbose) System.out.println("Error code 4, Invalid TFTP Operation");
+					
 					System.out.println(new String(errorMsg));
+					
+					quit();
+				}
+				if(rcvPkt.getData()[3] == 2)
+				{
+					byte[] errorMsg = new byte[rcvPkt.getLength()];
+					
+					System.arraycopy(rcvPkt.getData(), 4, errorMsg, 0, rcvPkt.getLength() - 5);
+					if (verbose) System.out.println("Error code 2, Access Violation");
+					System.out.println("Could not find specified file on server.");
 					
 					quit();
 				}
@@ -474,4 +506,5 @@ public class Client {
 	public static void main(String[] args) throws IOException {
 		Client client = new Client();
 	}
+
 }
