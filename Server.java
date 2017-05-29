@@ -160,7 +160,7 @@ public class Server {
 			
 			try {
 				sock = new DatagramSocket();
-				sock.send(new DatagramPacket(emsg, 5 + emsg.length, request.getAddress(), request.getPort()));	//send error
+				sock.send(new DatagramPacket(emsg, emsg.length, request.getAddress(), request.getPort()));	//send error
 				sock.close();
 			} catch (SocketException e) {
 				e.printStackTrace();
