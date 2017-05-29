@@ -158,6 +158,7 @@ public class Client {
 	 */
 	private void startWrite() throws IOException {
 		int sizeRead;
+		int recBlock;
 
 		String file = pickFile();
 
@@ -179,6 +180,7 @@ public class Client {
 			in = new BufferedInputStream(new FileInputStream("Client/" + file));
 		} catch (FileNotFoundException e) {
 			System.out.println("File name " + file + " could not be found. Please check permissions or spelling.");
+			quit();
 		}
 		// Build the WRQ packet from the request array.
 		if (verbose) System.out.println("Sending request.");
@@ -244,7 +246,7 @@ public class Client {
 			}
 
 			if (verbose) {
-				System.out.print("Received block "); System.out.println((int)((0xff & rcvPkt.getData()[3]) + 256 * (0xff & rcvPkt.getData()[2])));
+				System.out.println("Received packet");
 				System.out.print("Opcode ");
 				System.out.println(new Integer(rcvPkt.getData()[1]));
 				System.out.println(new String(rcvPkt.getData()));
@@ -352,8 +354,15 @@ public class Client {
 
 		// Prompt the user to select a file to read, then open and/or create the file to write to.
 		String file = pickFile();
+		BufferedOutputStream out=null;
 		if (verbose) System.out.println("Opening file.");
-		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream("Client/" + file));
+		try {
+			out= new BufferedOutputStream(new FileOutputStream("Client/" + file));
+		} catch (FileNotFoundException e) {
+			System.out.println("Path Client/" + file + " could not be found. Please check permissions or spelling.");
+			quit();
+		}
+		
 
 		// Build the data buffer for the RRQ.
 		byte[] request = buildRQ(file, readReq);
