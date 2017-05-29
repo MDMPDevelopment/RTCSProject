@@ -517,7 +517,7 @@ public class Server {
 					readReceive();
 				}else{
 					
-					while ((0xff & rPkt.getData()[3]) + 256 * (0xff & rPkt.getData()[2]) < (0xff & block[1]) + 256 * (0xff & block[0])) {
+					while (rPkt.getData()[3])< block[1]-1 &&(rPkt.getData()[2] < block[0])) {
 						readReceive();
 					}
 				}
