@@ -239,7 +239,7 @@ public class Client {
 			if(rcvPkt==null){
 				writeReceive();
 			}else{
-				while ((0xff & rcvPkt.getData()[3]) + 256 * (0xff & rcvPkt.getData()[2]) < (0xff & block[1]) + 256 * (0xff & block[0])) {
+				while ((rcvPkt.getData()[3]< block[1]-1 )&&(rcvPkt.getData()[2] < block[0])) {
 					writeReceive();
 				}
 			}
