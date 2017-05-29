@@ -8,6 +8,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.util.Scanner;
 
 public class Server {
@@ -27,7 +28,6 @@ public class Server {
 	public Server() {
 		try {
 			port69 = new DatagramSocket(69);
-			port69.setSoTimeout(timeout_ms);
 		} catch (SocketException e) {
 			e.printStackTrace();
 		}
@@ -258,7 +258,6 @@ public class Server {
 			
 			try {
 				sock = new DatagramSocket();
-				sock.setSoTimeout(timeout_ms);
 			} catch (SocketException e) {
 				e.printStackTrace();
 			}
@@ -279,13 +278,29 @@ public class Server {
 		/**
 		 * Waits to receive a packet from the connected client.
 		 */
-		public void receive() {
+		public void receive() throws SocketTimeoutException {
 			rPkt = new DatagramPacket(rData, 516);
 			
 			try {
 				sock.receive(rPkt);
+			} catch (SocketTimeoutException e) {
+				throw e;
 			} catch (IOException e) {
 				e.printStackTrace();
+			}
+		}
+		
+		private void readReceive() {
+			boolean success = false;
+			
+			while (!success) {
+				try {
+					receive();
+					success = true;
+				} catch (SocketTimeoutException e) {
+					if (verbose) System.out.println("Receive timed out.  Retransmitting.");
+					success = false;
+				}
 			}
 		}
 		
@@ -302,6 +317,8 @@ public class Server {
 			// Opens the file to write.
 			if (verbose) System.out.println("Opening file.");
 			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(filename));
+			
+			sock.setSoTimeout(0);
 			
 			// Build and send the request response.
 			response[0] = 0x00;
@@ -430,6 +447,8 @@ public class Server {
 			if (verbose) System.out.println("Opening file.");
 			BufferedInputStream in = new BufferedInputStream(new FileInputStream(filename));
 			
+			sock.setSoTimeout(timeout_ms);
+			
 			//Read in first 512 byte block.
 			sizeRead = in.read(data);
 			
@@ -466,7 +485,7 @@ public class Server {
 				
 				sPkt = new DatagramPacket(response, sizeRead + 4, target, port);
 				send(sPkt);
-				receive();
+				readReceive();
 				
 				if (verbose) {
 					System.out.print("Received ");
@@ -490,7 +509,7 @@ public class Server {
 					if (rPkt.getData()[3]==5) {
 						System.out.println("Data sent to incorrect client, attempting to retransfer");
 						send(sPkt);
-						receive();
+						readReceive();
 						
 						if (verbose) {
 		 					System.out.print("Received ");
