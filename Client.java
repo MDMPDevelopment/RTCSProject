@@ -15,6 +15,7 @@ public class Client {
 	private static final byte writeReq = 0x02;
 	private static final String mode = "octet";
 	private static final String badTID = "Invalid TID";
+	private static final String defaultDir = "./Client/";
 
 	private byte[] rData;
 
@@ -24,6 +25,8 @@ public class Client {
 
 	private int port, TID;
 	private boolean test, verbose;
+	
+	private String dir;
 
 	public Client() throws UnknownHostException, SocketException {
 		target = InetAddress.getLocalHost();
@@ -32,6 +35,8 @@ public class Client {
 		verbose = false;
 
 		sock = new DatagramSocket();
+		
+		dir = defaultDir;
 
 		new UI().start();
 	}
@@ -47,6 +52,14 @@ public class Client {
 		file = stream.nextLine();
 
 		return file;
+	}
+	
+	private void changeDir() {
+		Scanner stream = new Scanner(System.in);
+		System.out.println("Enter the full path of the new directory.");
+		System.out.println("Please use / instead of \\, and include a terminating /");
+		dir = stream.nextLine();
+		if (dir.charAt(dir.length() - 1) != '/') dir = dir + "/";
 	}
 
 	/**
@@ -136,7 +149,7 @@ public class Client {
 
 		// Opens the file selected for reading.
 		if (verbose) System.out.println("Opening file.");
-		BufferedInputStream in = new BufferedInputStream(new FileInputStream("Client/" + file));
+		BufferedInputStream in = new BufferedInputStream(new FileInputStream(dir + file));
 
 		// Build the WRQ packet from the request array.
 		if (verbose) System.out.println("Sending request.");
@@ -206,7 +219,7 @@ public class Client {
 			if(rcvPkt.getPort() != TID) {
 				if (verbose) System.out.println(badTID);
 				
-				byte[] errorData =createErrorMsg((byte) 5, badTID.getBytes());
+				byte[] errorData = createErrorMsg((byte) 5, badTID.getBytes());
 				sndPkt = new DatagramPacket (errorData, errorData.length, target, port);
 				
 				send();
@@ -270,7 +283,7 @@ public class Client {
 		// Prompt the user to select a file to read, then open and/or create the file to write to.
 		String file = pickFile();
 		if (verbose) System.out.println("Opening file.");
-		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream("Client/" + file));
+		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(dir + file));
 
 		// Build the data buffer for the RRQ.
 		byte[] request = buildRQ(file, readReq);
@@ -428,8 +441,9 @@ public class Client {
 			System.out.println("W - Initiate file write");
 			System.out.println("R - Initiate file read");
 			System.out.println("I - Set the target IP (Default localhost)");
+			System.out.println("C - Change client directory.");
 			System.out.println("Q - Quit");
-			System.out.print("Test: "); System.out.print(test); System.out.print("    Verbose: "); System.out.println(verbose);
+			System.out.print("Test: "); System.out.print(test); System.out.print("    Verbose: "); System.out.print(verbose); System.out.print("      Current directory: "); System.out.println(dir);
 		}
 
 		/**
@@ -457,6 +471,8 @@ public class Client {
 					case 'r': startRead();
 							  break;
 					case 'i': setTarget();
+							  break;
+					case 'c': changeDir();
 							  break;
 				}
 			}
