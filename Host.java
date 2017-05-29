@@ -118,9 +118,6 @@ public class Host {
 		System.exit(0);
 	}
 
-	private int getTest() {
-		return this.test;
-	}
 	private void delay(int ms){
 		try {
 		Thread.sleep(ms);
@@ -321,7 +318,6 @@ public class Host {
 		 * Prints out the user's options.
 		 */
 		private void printUI() {
-			System.out.println("T - Toggle test mode");
 			System.out.println("V - Toggle verbose mode");
 			System.out.println("E - View error simulator options");
 			System.out.println("Q - Quit");
@@ -344,8 +340,6 @@ public class Host {
 				switch (command.toLowerCase().charAt(0)) {
 					case 'q': quit = true;
 							  quit();
-							  break;
-					case 't': getTest();
 							  break;
 					case 'v': verbose = !verbose;
 						  	  break;
