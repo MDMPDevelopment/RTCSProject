@@ -1,5 +1,3 @@
-package it4;
-
 
 import java.net.DatagramSocket;
 import java.io.IOException;
