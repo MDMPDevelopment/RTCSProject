@@ -1,3 +1,5 @@
+package it4;
+
 
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -368,7 +370,8 @@ public class Server {
  					System.out.print("Opcode ");
  					System.out.println(new Integer(rPkt.getData()[1]));
  					System.out.print("Block ");
- 					System.out.println(0xff & rPkt.getData()[3] + 256 * rPkt.getData()[2]);
+ 					System.out.println( (int)rPkt.getData()[3] );
+ 					
  					System.out.println();
  				}
 				
@@ -381,7 +384,15 @@ public class Server {
 					send(sPkt);
 					continue;
 				}
-				
+				if(!(rPkt.getData()[1] == 0x03 || rPkt.getData()[1] == 0x05 )){
+					if (verbose) System.out.println(error4);
+					
+					byte[] errorData =createErrorMsg((byte)4, error4.getBytes());
+					sPkt  = new DatagramPacket(errorData, errorData.length, rPkt.getAddress(), rPkt.getPort());
+					send(sPkt);
+					quit();
+				}
+
 				// While received error packet, handle error.
 				while (rPkt.getData()[1] == 0x05) {
 					if (rPkt.getData()[3] == 0x05) {
@@ -470,7 +481,7 @@ public class Server {
 			sizeRead = in.read(data);
 			
 			if (verbose) System.out.println("Starting read.");
-			
+		
 			/*
 			 * While the end of the file hasn't been reached:
 			 *   - Increment the block number
@@ -503,9 +514,15 @@ public class Server {
 				sPkt = new DatagramPacket(response, sizeRead + 4, target, port);
 				send(sPkt);
 				
-				while ((0xff & rPkt.getData()[3]) + 256 * (0xff & rPkt.getData()[2]) < (0xff & block[1]) + 256 * (0xff & block[0])) {
+				if(rPkt==null){
 					readReceive();
+				}else{
+					
+					while ((0xff & rPkt.getData()[3]) + 256 * (0xff & rPkt.getData()[2]) < (0xff & block[1]) + 256 * (0xff & block[0])) {
+						readReceive();
+					}
 				}
+				
 				
 				if (verbose) {
 					System.out.print("Received ");
@@ -523,7 +540,15 @@ public class Server {
 					sPkt  = new DatagramPacket (errorData, errorData.length, rPkt.getAddress(), rPkt.getPort());
 					send(sPkt);
 				}
-				
+				if(!(rPkt.getData()[1] == 0x04 || rPkt.getData()[1] == 0x05 )){
+					if (verbose) System.out.println(error4);
+					
+					byte[] errorData =createErrorMsg((byte)4, error4.getBytes());
+					sPkt  = new DatagramPacket(errorData, errorData.length, rPkt.getAddress(), rPkt.getPort());
+					send(sPkt);
+					quit();
+				}
+
 				// While received error packet, handle error.
 				while (rPkt.getData()[1] == 5) {
 					if (rPkt.getData()[3]==5) {
