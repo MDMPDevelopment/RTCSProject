@@ -363,13 +363,7 @@ public class Server {
 			 *    - Build and send the response.
 			 */
 			do {
-				if (rPkt == null) {
-					receive();
-				} else {
-					while ((rPkt.getData()[3]< block[1] )&&(rPkt.getData()[2] < block[0])) {
-						receive();
-					}
-				}
+				receive();
 				
 				if (verbose && rPkt.getData()[1] == 0x03) {
  					System.out.print("Received ");
@@ -408,10 +402,7 @@ public class Server {
 						if (verbose) System.out.println("Acknowledge went to incorrect client, attempting to retransfer");
 						
 						send(sPkt);
-
-						while ((rPkt.getData()[3]< block[1] )&&(rPkt.getData()[2] < block[0])) {
-							receive();
-						}
+						receive();
 						
 						// If the next packet is correct, print packet information.
 						if (verbose && rPkt.getData()[1] == 0x03) {
@@ -534,14 +525,9 @@ public class Server {
 				sPkt = new DatagramPacket(response, sizeRead + 4, target, port);
 				send(sPkt);
 				
-				if(rPkt==null){
-					readReceive();
-				}else{
-					
-					while (rPkt.getData()[3]< block[1]-1 &&(rPkt.getData()[2] < block[0])) {
+				
 						readReceive();
-					}
-				}
+
 				
 				
 				if (verbose) {
@@ -574,10 +560,7 @@ public class Server {
 					if (rPkt.getData()[3]==5) {
 						System.out.println("Data sent to incorrect client, attempting to retransfer");
 						send(sPkt);
-
-						while ((0xff & rPkt.getData()[3]) + 256 * (0xff & rPkt.getData()[2]) < (0xff & block[1]) + 256 * (0xff & block[0])) {
-							readReceive();
-						}
+						readReceive();
 						
 						if (verbose) {
 		 					System.out.print("Received ");

@@ -237,13 +237,9 @@ public class Client {
 			sndPkt = new DatagramPacket(request, request.length, target, port);
 
 			send();
-			if(rcvPkt==null){
-				writeReceive();
-			}else{
-				while ((rcvPkt.getData()[3]< block[1] )&&(rcvPkt.getData()[2] < block[0])) {
+
 					writeReceive();
-				}
-			}
+
 
 			if (verbose) {
 				System.out.println("Received packet");
@@ -289,9 +285,7 @@ public class Client {
 
 					send();
 					
-					while ((rcvPkt.getData()[3]< block[1] )&&(rcvPkt.getData()[2] < block[0])) {
 						writeReceive();
-					}
 					
 					if (verbose) {
 						System.out.println("Received packet");
@@ -404,11 +398,7 @@ public class Client {
 			// Used to prevent a double receive() on the first block. 
 			if (first) {
 				first = false;
-			} else {
-				while ((rcvPkt.getData()[3]< block[1] )&&(rcvPkt.getData()[2] < block[0])) {
-					receive();
-				}
-			}
+			} else receive();
 
 			if (verbose) {
 				System.out.println("Received packet");
@@ -445,10 +435,7 @@ public class Client {
 					System.out.println("Acknowledge went to wrong server, attempting to retransfer");
 
 					send();
-					
-					while ((rcvPkt.getData()[3]< block[1] )&&(rcvPkt.getData()[2] < block[0])) {
-						receive();
-					}
+					receive();
 				
 					if (verbose) {
 						System.out.println("Received packet");
