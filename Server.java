@@ -360,9 +360,14 @@ public class Server {
 			 *    - Build and send the response.
 			 */
 			do {
-				while ((rPkt.getData()[3]< block[1] )&&(rPkt.getData()[2] < block[0])) {
+				if (rPkt == null) {
 					receive();
+				} else {
+					while ((rPkt.getData()[3]< block[1] )&&(rPkt.getData()[2] < block[0])) {
+						receive();
+					}
 				}
+				
 				if (verbose && rPkt.getData()[1] == 0x03) {
  					System.out.print("Received ");
  					System.out.println(new String(rPkt.getData()));
@@ -522,7 +527,7 @@ public class Server {
 					readReceive();
 				}else{
 					
-					while (rPkt.getData()[3])< block[1]-1 &&(rPkt.getData()[2] < block[0])) {
+					while (rPkt.getData()[3]< block[1]-1 &&(rPkt.getData()[2] < block[0])) {
 						readReceive();
 					}
 				}
