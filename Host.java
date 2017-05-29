@@ -216,7 +216,7 @@ public class Host {
 			byte[] data = changeOpcode(rcvPkt1);
 			rcvPkt1.setData(data);
 			errorReq = NORMAL;
-		} else if (errorReq == CHANGELENGTHCLIENT) {
+		} else if (errorReq == CHANGELENGTHCLIENT &&clientPkt ==0) {
 			byte[] data = changeLength(rcvPkt1);
 			rcvPkt1.setData(data);
 			errorReq = NORMAL;
@@ -275,7 +275,7 @@ public class Host {
 			byte[] data = changeOpcode(rcvPkt1);
 			rcvPkt1.setData(data);
 			errorReq = NORMAL;
-		} else if (errorReq == CHANGELENGTHSERVER) {
+		} else if (errorReq == CHANGELENGTHSERVER &&serverPkt==0) {
 			byte[] data = changeLength(rcvPkt1);
 			rcvPkt1.setData(data);
 			errorReq = NORMAL;
