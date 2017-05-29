@@ -1,3 +1,5 @@
+package it4;
+
 import java.net.DatagramSocket;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -17,6 +19,7 @@ public class Client {
 	private static final byte writeReq = 0x02;
 	private static final int timeout_ms = 500;
 	private static final String mode = "octet";
+	private static final String error4 = "Error 4: Illegal TFTP operation";
 	private static final String badTID = "Invalid TID";
 	private static final String defaultDir = "./Client/";
 
@@ -36,7 +39,7 @@ public class Client {
 
 		test = false;
 		verbose = false;
-		
+	
 		dir = defaultDir;
 
 		try {
@@ -94,12 +97,7 @@ public class Client {
 			sock.receive(rcvPkt);
 			
 			//Received error packet.
-			if (rcvPkt.getData()[1]==5) {
-				if (rcvPkt.getData()[3] == 4) {
-					System.out.println("Illegal TFTP operation was requested.");
-					quit();
-				}
-			}
+			
 		} catch (SocketTimeoutException e) {
 			throw e;
 		} catch (IOException e) {
@@ -239,9 +237,12 @@ public class Client {
 			sndPkt = new DatagramPacket(request, request.length, target, port);
 
 			send();
-			
-			while ((0xff & rcvPkt.getData()[3]) + 256 * (0xff & rcvPkt.getData()[2]) < (0xff & block[1]) + 256 * (0xff & block[0])) {
+			if(rcvPkt==null){
 				writeReceive();
+			}else{
+				while ((0xff & rcvPkt.getData()[3]) + 256 * (0xff & rcvPkt.getData()[2]) < (0xff & block[1]) + 256 * (0xff & block[0])) {
+					writeReceive();
+				}
 			}
 
 			if (verbose) {
@@ -251,7 +252,14 @@ public class Client {
 				System.out.println(new String(rcvPkt.getData()));
 				System.out.println();
 			}
-
+			if(!(rcvPkt.getData()[1] == 0x04 || rcvPkt.getData()[1] == 0x05 )){
+				if (verbose) System.out.println(error4);
+				
+				byte[] errorData =createErrorMsg((byte)4, error4.getBytes());
+				sndPkt  = new DatagramPacket(errorData, errorData.length, rcvPkt.getAddress(), rcvPkt.getPort());
+				send();
+				quit();
+			}
 			if(rcvPkt.getPort() != TID) {
 				if (verbose) System.out.println(badTID);
 				
@@ -262,6 +270,10 @@ public class Client {
 			}
 
 			if(rcvPkt.getData()[1]==5) {
+				if (rcvPkt.getData()[3] == 4) {
+					System.out.println("Illegal TFTP operation was requested.");
+					quit();
+				}
 				if (rcvPkt.getData()[3]==5) {
 					System.out.println("Data sent to incorrect server, attempting to retransfer");
 					
@@ -390,6 +402,15 @@ public class Client {
 				System.out.println(new String(rcvPkt.getData()));
 			}
 
+			
+			if(!(rcvPkt.getData()[1] == 0x03 || rcvPkt.getData()[1] == 0x05 )){
+				if (verbose) System.out.println(error4);
+				
+				byte[] errorData =createErrorMsg((byte)4, error4.getBytes());
+				sndPkt  = new DatagramPacket(errorData, errorData.length, rcvPkt.getAddress(), rcvPkt.getPort());
+				send();
+				quit();
+			}
 			if(rcvPkt.getPort() != TID) {
 				if (verbose) System.out.println(badTID);
 				byte [] errorData = createErrorMsg((byte) 5, badTID.getBytes());
@@ -401,6 +422,10 @@ public class Client {
 			}
 
 			if(rcvPkt.getData()[1]==5) {
+				if (rcvPkt.getData()[3] == 4) {
+					System.out.println("Illegal TFTP operation was requested.");
+					quit();
+				}
 				if (rcvPkt.getData()[3]==5) {
 					System.out.println("Acknowledge went to wrong server, attempting to retransfer");
 
@@ -437,7 +462,7 @@ public class Client {
 					quit();
 				}
 			}
-
+	
 			if (block[1]++ == 0xff) block[0]++;
 
 			data = new byte[rcvPkt.getLength() - 4];
@@ -452,6 +477,7 @@ public class Client {
 			sndPkt = new DatagramPacket(request, request.length, target, port);
 
 			send();
+
 		} while (rcvPkt.getLength() > 515);
 		
 		out.close();
