@@ -18,6 +18,7 @@ public class Client {
 	private static final int timeout_ms = 500;
 	private static final String mode = "octet";
 	private static final String badTID = "Invalid TID";
+	private static final String defaultDir = "./Client/";
 
 	private byte[] rData;
 
@@ -27,12 +28,16 @@ public class Client {
 
 	private int port, TID;
 	private boolean test, verbose;
+	
+	private String dir;
 
 	public Client() throws UnknownHostException, SocketException {
 		target = InetAddress.getLocalHost();
 
 		test = false;
 		verbose = false;
+		
+		dir = defaultDir;
 
 		try {
 			sock = new DatagramSocket();
@@ -55,6 +60,14 @@ public class Client {
 		file = stream.nextLine();
 
 		return file;
+	}
+	
+	private void changeDir() {
+		Scanner stream = new Scanner(System.in);
+		System.out.println("Enter the full path of the new directory.");
+		System.out.println("Please use / instead of \\, and include a terminating /");
+		dir = stream.nextLine();
+		if (dir.charAt(dir.length() - 1) != '/') dir = dir + "/";
 	}
 
 	/**
@@ -500,6 +513,7 @@ public class Client {
 			System.out.println("W - Initiate file write");
 			System.out.println("R - Initiate file read");
 			System.out.println("I - Set the target IP (Default localhost)");
+			System.out.println("C - Change client directory.");
 			System.out.println("Q - Quit");
 			System.out.print("Test: "); System.out.print(test); System.out.print("    Verbose: "); System.out.println(verbose);
 		}
@@ -529,6 +543,8 @@ public class Client {
 					case 'r': startRead();
 							  break;
 					case 'i': setTarget();
+							  break;
+					case 'c': changeDir();
 							  break;
 				}
 			}

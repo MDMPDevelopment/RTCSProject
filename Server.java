@@ -17,6 +17,7 @@ public class Server {
 	private static final String error4 = "Error 4: Illegal TFTP operation";
 	private static final String badTID = "Invalid TID";
 	private static final int timeout_ms = 500;
+	private static final String defaultDir = "./Server/";
 	
 	private DatagramSocket port69;
 	private byte[] mode, file;
@@ -24,6 +25,8 @@ public class Server {
 	private DatagramPacket request;
 	
 	private Boolean valid, test, verbose;
+	
+	private String dir;
 	
 	public Server() {
 		try {
@@ -34,6 +37,8 @@ public class Server {
 		
 		verbose = false;
 		test = false;
+		
+		dir = defaultDir;
 		
 		new UI().start();
 	}
@@ -62,6 +67,15 @@ public class Server {
 			e.printStackTrace();
 		}
 	}
+	
+	private void changeDir() {
+		Scanner stream = new Scanner(System.in);
+		System.out.println("Enter the full path of the new directory.");
+		System.out.println("Please use / instead of \\, and include a terminating /");
+		dir = stream.nextLine();
+		if (dir.charAt(dir.length() - 1) != '/') dir = dir + "/";
+	}
+	
 	/**
 	 * Generates an error message.
 	 * <p>
@@ -188,6 +202,7 @@ public class Server {
 		private void printUI() {
 			System.out.println("T - Toggle test mode");
 			System.out.println("V - Toggle verbose mode");
+			System.out.println("C - Change server directory");
 			System.out.println("Q - Quit");
 			System.out.print("Test: "); System.out.print(test); System.out.print("    Verbose: "); System.out.println(verbose);
 		}
@@ -211,6 +226,8 @@ public class Server {
 					case 't': test = !test;
 							  break;
 					case 'v': verbose = !verbose;
+							  break;
+					case 'c': changeDir();
 							  break;
 				}
 			}
