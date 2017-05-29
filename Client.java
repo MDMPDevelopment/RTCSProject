@@ -1,3 +1,4 @@
+
 import java.net.DatagramSocket;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -529,23 +530,26 @@ public class Client {
 			while (!quit) {
 				printUI();
 				command = input.nextLine();
-
-				switch (command.toLowerCase().charAt(0)) {
-					case 'q': quit = true;
-							  quit();
-							  break;
-					case 't': test = !test;
-							  break;
-					case 'v': verbose = !verbose;
-							  break;
-					case 'w': startWrite();
-							  break;
-					case 'r': startRead();
-							  break;
-					case 'i': setTarget();
-							  break;
-					case 'c': changeDir();
-							  break;
+				
+				if (command.isEmpty()==false){
+					switch (command.toLowerCase().charAt(0)) {
+						case 'q': quit = true;
+							  	quit();
+							  	break;
+						case 't': test = !test;
+								break;
+						case 'v': verbose = !verbose;
+								break;
+						case 'w': startWrite();
+								break;
+						case 'r': startRead();
+								break;
+						case 'i': setTarget();
+							 	break;
+						case 'c': changeDir();
+								break;
+					}
+				
 				}
 			}
 		}
