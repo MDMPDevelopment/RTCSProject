@@ -218,17 +218,18 @@ public class Server {
 			while (!quit) {
 				printUI();
 				command = input.nextLine();
-				
-				switch (command.toLowerCase().charAt(0)) {
-					case 'q': quit = true;
+			
+				if (command.isEmpty()==false){	
+					switch (command.toLowerCase().charAt(0)) {
+						case 'q': quit = true;
 							  quit();
 							  break;
-					case 't': test = !test;
+						case 't': test = !test;
 							  break;
-					case 'v': verbose = !verbose;
+						case 'v': verbose = !verbose;
 							  break;
-					case 'c': changeDir();
-							  break;
+					}
+				
 				}
 			}
 		}
