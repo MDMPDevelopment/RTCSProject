@@ -1,3 +1,5 @@
+package it4;
+
 
 import java.net.DatagramSocket;
 import java.io.IOException;
@@ -69,10 +71,16 @@ public class Host {
 	 */
 	private byte[] changeOpcode(DatagramPacket pkt) {
 		byte[] data = pkt.getData();
-		data[0] = errorReq == (CHANGEOPCODECLIENT | CHANGEOPCODESERVER) ? (byte)1 : (byte)0;
-		data[1] = errorReq == (CHANGEOPCODECLIENT | CHANGEOPCODESERVER) ? (byte)5 : (byte)4;	
+		data[0] = (byte)0;
+		if(errorReq == CHANGEOPCODECLIENT || errorReq==CHANGEOPCODESERVER)
+		{
+			data[1]=(byte)9;
+		}else{
+			data[1] = (byte)4;
+		}
 		return data;
 	}
+
 
 	/**
 	 * Changes the length of the packet to 530 bytes
@@ -224,7 +232,7 @@ public class Host {
 		target2 = rcvPkt1.getAddress();
 		returnPort = rcvPkt1.getPort();
 
-		System.out.println(clientPkt);
+		
 		if (errorReq == CHANGETIDCLIENT && clientPkt==0) {
 			try {
 				errorSocket = new DatagramSocket();
@@ -235,8 +243,11 @@ public class Host {
 
 			}
 		} else { 
-			packetNum--;
-			if(errorReq == DELAYCLIENT){
+			if(errorReq == DELAYCLIENT || errorReq == DUPLICATECLIENTPKT ||errorReq == LOSECLIENTPKT)
+			{
+				packetNum--;
+			}
+			if(errorReq == DELAYCLIENT&&packetNum ==0){
 			
 				
 					
@@ -269,19 +280,20 @@ public class Host {
 	public void forwardReply() {
 		DatagramSocket errorSocket;
 		serverPkt--;
+	
 		if ((errorReq == CHANGEOPCODESERVER || errorReq == CHANGEOPCODESERVERv) && serverPkt ==0) {
-			byte[] data = changeOpcode(rcvPkt1);
-			rcvPkt1.setData(data);
+			byte[] data = changeOpcode(rcvPkt2);
+			rcvPkt2.setData(data);
 			errorReq = NORMAL;
 		} else if (errorReq == CHANGELENGTHSERVER &&serverPkt==0) {
 			byte[] data = changeLength(rcvPkt1);
 			rcvPkt1.setData(data);
 			errorReq = NORMAL;
 		}
+		
 		sndPkt = new DatagramPacket(rcvPkt2.getData(), rcvPkt2.getLength(), target2, returnPort);
 
 		targetPort = rcvPkt2.getPort();
-		System.out.println(serverPkt);
 		if (errorReq == CHANGETIDSERVER && serverPkt==0) {
 			try {
 				errorSocket = new DatagramSocket();
@@ -293,7 +305,10 @@ public class Host {
 
 			}
 		} else {
-			packetNum--;
+			if(errorReq == DELAYSERVER || errorReq == DUPLICATESERVERPKT ||errorReq == LOSESERVERPKT)
+			{
+				packetNum--;
+			}
 			if(errorReq == DELAYSERVER&& packetNum ==0){
 				
 		
