@@ -398,7 +398,7 @@ public class Server {
 					}
 				}
 				
-				if (++block[1] == 0) block[0]++;
+				if (block[1]++ == 0xff) block[0]++;
 				
 				// Separate data from header.
 				data = new byte[rPkt.getLength() - 4];
@@ -462,7 +462,7 @@ public class Server {
 			 *   - Read in the next 512 byte block of data
 			 */
 			while (sizeRead != -1) {
-				if (++block[1] == 0) block[0]++;
+				if (block[1]++ == 0xff) block[0]++;
 				
 				if (verbose) System.out.print("Read ");
 				if (verbose) System.out.println(new String(data));
@@ -485,7 +485,10 @@ public class Server {
 				
 				sPkt = new DatagramPacket(response, sizeRead + 4, target, port);
 				send(sPkt);
-				readReceive();
+				
+				while ((0xff & rPkt.getData()[3]) + 256 * (0xff & rPkt.getData()[2]) < (0xff & block[1]) + 256 * (0xff & block[0])) {
+					readReceive();
+				}
 				
 				if (verbose) {
 					System.out.print("Received ");

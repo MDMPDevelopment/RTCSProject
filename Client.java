@@ -148,6 +148,7 @@ public class Client {
 	 */
 	private void startWrite() throws IOException {
 		int sizeRead;
+		int recBlock;
 
 		String file = pickFile();
 
@@ -226,7 +227,9 @@ public class Client {
 
 			send();
 			
-			writeReceive();
+			while ((0xff & rcvPkt.getData()[3]) + 256 * (0xff & rcvPkt.getData()[2]) < (0xff & block[1]) + 256 * (0xff & block[0])) {
+				writeReceive();
+			}
 
 			if (verbose) {
 				System.out.println("Received packet");
@@ -302,7 +305,7 @@ public class Client {
 				}
 			
 
-			if (++block[1] == 0) block[0]++;
+			if (block[1]++ == 0xff) block[0]++;
 
 			sizeRead = in.read(data);
 		}
@@ -422,7 +425,7 @@ public class Client {
 				}
 			}
 
-			if (++block[1] == 0) block[0]++;
+			if (block[1]++ == 0xff) block[0]++;
 
 			data = new byte[rcvPkt.getLength() - 4];
 			System.arraycopy(rcvPkt.getData(), 4, data, 0, data.length);
