@@ -158,7 +158,6 @@ public class Client {
 	 */
 	private void startWrite() throws IOException {
 		int sizeRead;
-		int recBlock;
 
 		String file = pickFile();
 
@@ -245,7 +244,7 @@ public class Client {
 			}
 
 			if (verbose) {
-				System.out.println("Received packet");
+				System.out.print("Received block "); System.out.println((int)((0xff & rcvPkt.getData()[3]) + 256 * (0xff & rcvPkt.getData()[2])));
 				System.out.print("Opcode ");
 				System.out.println(new Integer(rcvPkt.getData()[1]));
 				System.out.println(new String(rcvPkt.getData()));

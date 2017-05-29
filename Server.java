@@ -200,7 +200,6 @@ public class Server {
 		 * Prints out the user's options.
 		 */
 		private void printUI() {
-			System.out.println("T - Toggle test mode");
 			System.out.println("V - Toggle verbose mode");
 			System.out.println("C - Change server directory");
 			System.out.println("Q - Quit");
@@ -224,9 +223,9 @@ public class Server {
 						case 'q': quit = true;
 							  quit();
 							  break;
-						case 't': test = !test;
-							  break;
 						case 'v': verbose = !verbose;
+							  break;
+						case 'c': changeDir();
 							  break;
 					}
 				
@@ -458,7 +457,7 @@ public class Server {
 				
 				if (verbose) {
 					System.out.print("Sending acknowledge for block ");
- 					System.out.println(0xff & rPkt.getData()[3] + 256 * (0xff & rPkt.getData()[2]));
+ 					System.out.println(0xff &block[1] + 256 * (0xff & block[0]));
  					System.out.println();
  				}
 				
