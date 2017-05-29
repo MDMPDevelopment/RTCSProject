@@ -239,7 +239,7 @@ public class Client {
 			if(rcvPkt==null){
 				writeReceive();
 			}else{
-				while ((rcvPkt.getData()[3]< block[1]-1 )&&(rcvPkt.getData()[2] < block[0])) {
+				while ((rcvPkt.getData()[3]< block[1] )&&(rcvPkt.getData()[2] < block[0])) {
 					writeReceive();
 				}
 			}
@@ -287,7 +287,11 @@ public class Client {
 					}
 
 					send();
-					writeReceive(); 
+					
+					while ((rcvPkt.getData()[3]< block[1] )&&(rcvPkt.getData()[2] < block[0])) {
+						writeReceive();
+					}
+					
 					if (verbose) {
 						System.out.println("Received packet");
 						System.out.print("Opcode ");
@@ -329,7 +333,7 @@ public class Client {
 				}
 			
 
-			if (block[1]++ == 0xff) block[0]++;
+			if (block[1]++ == (byte)0xff) block[0]++;
 
 			sizeRead = in.read(data);
 		}
@@ -392,7 +396,11 @@ public class Client {
 			// Used to prevent a double receive() on the first block. 
 			if (first) {
 				first = false;
-			} else receive();
+			} else {
+				while ((rcvPkt.getData()[3]< block[1] )&&(rcvPkt.getData()[2] < block[0])) {
+					receive();
+				}
+			}
 
 			if (verbose) {
 				System.out.println("Received packet");
@@ -429,7 +437,10 @@ public class Client {
 					System.out.println("Acknowledge went to wrong server, attempting to retransfer");
 
 					send();
-					receive();
+					
+					while ((rcvPkt.getData()[3]< block[1] )&&(rcvPkt.getData()[2] < block[0])) {
+						receive();
+					}
 				
 					if (verbose) {
 						System.out.println("Received packet");
@@ -462,7 +473,7 @@ public class Client {
 				}
 			}
 	
-			if (block[1]++ == 0xff) block[0]++;
+			if (block[1]++ == (byte)0xff) block[0]++;
 
 			data = new byte[rcvPkt.getLength() - 4];
 			System.arraycopy(rcvPkt.getData(), 4, data, 0, data.length);

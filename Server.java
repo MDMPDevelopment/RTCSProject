@@ -360,7 +360,9 @@ public class Server {
 			 *    - Build and send the response.
 			 */
 			do {
-				receive();
+				while ((rPkt.getData()[3]< block[1] )&&(rPkt.getData()[2] < block[0])) {
+					receive();
+				}
 				if (verbose && rPkt.getData()[1] == 0x03) {
  					System.out.print("Received ");
  					System.out.println(new String(rPkt.getData()));
@@ -398,7 +400,10 @@ public class Server {
 						if (verbose) System.out.println("Acknowledge went to incorrect client, attempting to retransfer");
 						
 						send(sPkt);
-						receive();
+
+						while ((rPkt.getData()[3]< block[1] )&&(rPkt.getData()[2] < block[0])) {
+							receive();
+						}
 						
 						// If the next packet is correct, print packet information.
 						if (verbose && rPkt.getData()[1] == 0x03) {
@@ -425,7 +430,7 @@ public class Server {
 					}
 				}
 				
-				if (block[1]++ == 0xff) block[0]++;
+				if (block[1]++ == (byte)0xff) block[0]++;
 				
 				// Separate data from header.
 				data = new byte[rPkt.getLength() - 4];
@@ -489,7 +494,7 @@ public class Server {
 			 *   - Read in the next 512 byte block of data
 			 */
 			while (sizeRead != -1) {
-				if (block[1]++ == 0xff) block[0]++;
+				if (block[1]++ == (byte)0xff) block[0]++;
 				
 				if (verbose) System.out.print("Read ");
 				if (verbose) System.out.println(new String(data));
@@ -553,7 +558,10 @@ public class Server {
 					if (rPkt.getData()[3]==5) {
 						System.out.println("Data sent to incorrect client, attempting to retransfer");
 						send(sPkt);
-						readReceive();
+
+						while ((0xff & rPkt.getData()[3]) + 256 * (0xff & rPkt.getData()[2]) < (0xff & block[1]) + 256 * (0xff & block[0])) {
+							readReceive();
+						}
 						
 						if (verbose) {
 		 					System.out.print("Received ");
