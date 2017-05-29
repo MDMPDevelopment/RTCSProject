@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.Scanner;
 
@@ -35,7 +36,6 @@ public class Client {
 
 		try {
 			sock = new DatagramSocket();
-			sock.setSoTimeout(timeout_ms);
 		} catch (SocketException e) {
 			e.printStackTrace();
 			System.exit(-1);
@@ -73,7 +73,7 @@ public class Client {
 	/**
 	 * Receive from sock into rcvPkt.
 	 */
-	private void receive() {
+	private void receive() throws SocketTimeoutException {
 		rData = new byte[516];
 		rcvPkt = new DatagramPacket(rData, 516);
 
@@ -87,8 +87,24 @@ public class Client {
 					quit();
 				}
 			}
+		} catch (SocketTimeoutException e) {
+			throw e;
 		} catch (IOException e) {
 			e.printStackTrace();
+		}
+	}
+	
+	private void writeReceive() {
+		boolean success = false;
+		
+		while (!success) {
+			try {
+				receive();
+				success = true;
+			} catch (SocketTimeoutException e) {
+				if (verbose) System.out.println("Receive timed out.  Retransmitting.");
+				success = false;
+			}
 		}
 	}
 
@@ -144,18 +160,21 @@ public class Client {
 
 		// Opens the file selected for reading.
 		if (verbose) System.out.println("Opening file.");
+		
 		BufferedInputStream in = null;
-		try{
-		in = new BufferedInputStream(new FileInputStream("Client/" + file));
-		}catch (FileNotFoundException e) 
-		{
+		
+		sock.setSoTimeout(timeout_ms);
+		
+		try {
+			in = new BufferedInputStream(new FileInputStream("Client/" + file));
+		} catch (FileNotFoundException e) {
 			System.out.println("File name " + file + " could not be found. Please check permissions or spelling.");
 		}
 		// Build the WRQ packet from the request array.
 		if (verbose) System.out.println("Sending request.");
 		sndPkt = new DatagramPacket(request, request.length, target, test ? 23 : 69);
 		send();
-		receive();
+		writeReceive();
 
 		// Set the destination port and address based on the request response.
 		port = rcvPkt.getPort();
@@ -206,7 +225,8 @@ public class Client {
 			sndPkt = new DatagramPacket(request, request.length, target, port);
 
 			send();
-			receive();
+			
+			writeReceive();
 
 			if (verbose) {
 				System.out.println("Received packet");
@@ -223,7 +243,6 @@ public class Client {
 				sndPkt = new DatagramPacket (errorData, errorData.length, target, port);
 				
 				send();
-				//receive?
 			}
 
 			if(rcvPkt.getData()[1]==5) {
@@ -241,7 +260,7 @@ public class Client {
 					}
 
 					send();
-					receive(); 
+					writeReceive(); 
 					if (verbose) {
 						System.out.println("Received packet");
 						System.out.print("Opcode ");
@@ -313,6 +332,8 @@ public class Client {
 		byte[] block = {0x00, 0x00};
 		byte[] opcode = {0x00, 0x04};
 
+		sock.setSoTimeout(0);
+		
 		// Build the RRQ packet from the request array, send the request, then wait for a response.
 		if (verbose) System.out.println("Sending request.");
 		sndPkt = new DatagramPacket(request, request.length, target, test ? 23 : 69);
