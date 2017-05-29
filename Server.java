@@ -4,6 +4,7 @@ import java.net.InetAddress;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -200,6 +201,7 @@ public class Server {
 		 * Prints out the user's options.
 		 */
 		private void printUI() {
+			System.out.println("T - Toggle test mode");
 			System.out.println("V - Toggle verbose mode");
 			System.out.println("C - Change server directory");
 			System.out.println("Q - Quit");
@@ -223,9 +225,11 @@ public class Server {
 						case 'q': quit = true;
 							  quit();
 							  break;
-						case 'v': verbose = !verbose;
+						case 't': test = !test;
 							  break;
 						case 'c': changeDir();
+								break;
+						case 'v': verbose = !verbose;
 							  break;
 					}
 				
@@ -457,7 +461,7 @@ public class Server {
 				
 				if (verbose) {
 					System.out.print("Sending acknowledge for block ");
- 					System.out.println(0xff &block[1] + 256 * (0xff & block[0]));
+ 					System.out.println(0xff & rPkt.getData()[3] + 256 * (0xff & rPkt.getData()[2]));
  					System.out.println();
  				}
 				
@@ -481,7 +485,15 @@ public class Server {
 			
 			//Opens file to read.
 			if (verbose) System.out.println("Opening file.");
-			BufferedInputStream in = new BufferedInputStream(new FileInputStream(filename));
+			BufferedInputStream in=null;
+			if (verbose) System.out.println("Opening file.");
+			try {
+				in= new BufferedInputStream(new FileInputStream(filename));
+			} catch (FileNotFoundException e) {
+				System.out.println("Path " + filename + " could not be found.");
+				quit();
+			}
+			
 			
 			sock.setSoTimeout(timeout_ms);
 			
