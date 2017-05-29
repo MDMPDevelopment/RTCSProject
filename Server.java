@@ -4,10 +4,12 @@ import java.net.InetAddress;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.util.Scanner;
 
 public class Server {
@@ -15,6 +17,8 @@ public class Server {
 	private static final String octet = "octet";
 	private static final String error4 = "Error 4: Illegal TFTP operation";
 	private static final String badTID = "Invalid TID";
+	private static final int timeout_ms = 500;
+	private static final String defaultDir = "./Server/";
 	
 	private DatagramSocket port69;
 	private byte[] mode, file;
@@ -22,6 +26,8 @@ public class Server {
 	private DatagramPacket request;
 	
 	private Boolean valid, test, verbose;
+	
+	private String dir;
 	
 	public Server() {
 		try {
@@ -32,6 +38,8 @@ public class Server {
 		
 		verbose = false;
 		test = false;
+		
+		dir = defaultDir;
 		
 		new UI().start();
 	}
@@ -60,6 +68,15 @@ public class Server {
 			e.printStackTrace();
 		}
 	}
+	
+	private void changeDir() {
+		Scanner stream = new Scanner(System.in);
+		System.out.println("Enter the full path of the new directory.");
+		System.out.println("Please use / instead of \\, and include a terminating /");
+		dir = stream.nextLine();
+		if (dir.charAt(dir.length() - 1) != '/') dir = dir + "/";
+	}
+	
 	/**
 	 * Generates an error message.
 	 * <p>
@@ -158,7 +175,7 @@ public class Server {
 			
 			try {
 				sock = new DatagramSocket();
-				sock.send(new DatagramPacket(emsg, 5 + emsg.length, request.getAddress(), request.getPort()));	//send error
+				sock.send(new DatagramPacket(emsg, emsg.length, request.getAddress(), request.getPort()));	//send error
 				sock.close();
 			} catch (SocketException e) {
 				e.printStackTrace();
@@ -186,6 +203,7 @@ public class Server {
 		private void printUI() {
 			System.out.println("T - Toggle test mode");
 			System.out.println("V - Toggle verbose mode");
+			System.out.println("C - Change server directory");
 			System.out.println("Q - Quit");
 			System.out.print("Test: "); System.out.print(test); System.out.print("    Verbose: "); System.out.println(verbose);
 		}
@@ -201,15 +219,20 @@ public class Server {
 			while (!quit) {
 				printUI();
 				command = input.nextLine();
-				
-				switch (command.toLowerCase().charAt(0)) {
-					case 'q': quit = true;
+			
+				if (command.isEmpty()==false){	
+					switch (command.toLowerCase().charAt(0)) {
+						case 'q': quit = true;
 							  quit();
 							  break;
-					case 't': test = !test;
+						case 't': test = !test;
 							  break;
-					case 'v': verbose = !verbose;
+						case 'c': changeDir();
+								break;
+						case 'v': verbose = !verbose;
 							  break;
+					}
+				
 				}
 			}
 		}
@@ -276,13 +299,29 @@ public class Server {
 		/**
 		 * Waits to receive a packet from the connected client.
 		 */
-		public void receive() {
+		public void receive() throws SocketTimeoutException {
 			rPkt = new DatagramPacket(rData, 516);
 			
 			try {
 				sock.receive(rPkt);
+			} catch (SocketTimeoutException e) {
+				throw e;
 			} catch (IOException e) {
 				e.printStackTrace();
+			}
+		}
+		
+		private void readReceive() {
+			boolean success = false;
+			
+			while (!success) {
+				try {
+					receive();
+					success = true;
+				} catch (SocketTimeoutException e) {
+					if (verbose) System.out.println("Receive timed out.  Retransmitting.");
+					success = false;
+				}
 			}
 		}
 		
@@ -299,6 +338,8 @@ public class Server {
 			// Opens the file to write.
 			if (verbose) System.out.println("Opening file.");
 			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(filename));
+			
+			sock.setSoTimeout(0);
 			
 			// Build and send the request response.
 			response[0] = 0x00;
@@ -322,7 +363,14 @@ public class Server {
 			 *    - Build and send the response.
 			 */
 			do {
-				receive();
+				if (rPkt == null) {
+					receive();
+				} else {
+					while ((rPkt.getData()[3]< block[1] )&&(rPkt.getData()[2] < block[0])) {
+						receive();
+					}
+				}
+				
 				if (verbose && rPkt.getData()[1] == 0x03) {
  					System.out.print("Received ");
  					System.out.println(new String(rPkt.getData()));
@@ -331,7 +379,8 @@ public class Server {
  					System.out.print("Opcode ");
  					System.out.println(new Integer(rPkt.getData()[1]));
  					System.out.print("Block ");
- 					System.out.println(0xff & rPkt.getData()[3] + 256 * rPkt.getData()[2]);
+ 					System.out.println( (int)rPkt.getData()[3] );
+ 					
  					System.out.println();
  				}
 				
@@ -344,14 +393,25 @@ public class Server {
 					send(sPkt);
 					continue;
 				}
-				
+				if(!(rPkt.getData()[1] == 0x03 || rPkt.getData()[1] == 0x05 )){
+					if (verbose) System.out.println(error4);
+					
+					byte[] errorData =createErrorMsg((byte)4, error4.getBytes());
+					sPkt  = new DatagramPacket(errorData, errorData.length, rPkt.getAddress(), rPkt.getPort());
+					send(sPkt);
+					quit();
+				}
+
 				// While received error packet, handle error.
 				while (rPkt.getData()[1] == 0x05) {
 					if (rPkt.getData()[3] == 0x05) {
 						if (verbose) System.out.println("Acknowledge went to incorrect client, attempting to retransfer");
 						
 						send(sPkt);
-						receive();
+
+						while ((rPkt.getData()[3]< block[1] )&&(rPkt.getData()[2] < block[0])) {
+							receive();
+						}
 						
 						// If the next packet is correct, print packet information.
 						if (verbose && rPkt.getData()[1] == 0x03) {
@@ -378,7 +438,7 @@ public class Server {
 					}
 				}
 				
-				if (++block[1] == 0) block[0]++;
+				if (block[1]++ == (byte)0xff) block[0]++;
 				
 				// Separate data from header.
 				data = new byte[rPkt.getLength() - 4];
@@ -425,13 +485,23 @@ public class Server {
 			
 			//Opens file to read.
 			if (verbose) System.out.println("Opening file.");
-			BufferedInputStream in = new BufferedInputStream(new FileInputStream(filename));
+			BufferedInputStream in=null;
+			if (verbose) System.out.println("Opening file.");
+			try {
+				in= new BufferedInputStream(new FileInputStream(filename));
+			} catch (FileNotFoundException e) {
+				System.out.println("Path " + filename + " could not be found.");
+				quit();
+			}
+			
+			
+			sock.setSoTimeout(timeout_ms);
 			
 			//Read in first 512 byte block.
 			sizeRead = in.read(data);
 			
 			if (verbose) System.out.println("Starting read.");
-			
+		
 			/*
 			 * While the end of the file hasn't been reached:
 			 *   - Increment the block number
@@ -440,7 +510,7 @@ public class Server {
 			 *   - Read in the next 512 byte block of data
 			 */
 			while (sizeRead != -1) {
-				if (++block[1] == 0) block[0]++;
+				if (block[1]++ == (byte)0xff) block[0]++;
 				
 				if (verbose) System.out.print("Read ");
 				if (verbose) System.out.println(new String(data));
@@ -463,7 +533,16 @@ public class Server {
 				
 				sPkt = new DatagramPacket(response, sizeRead + 4, target, port);
 				send(sPkt);
-				receive();
+				
+				if(rPkt==null){
+					readReceive();
+				}else{
+					
+					while (rPkt.getData()[3]< block[1]-1 &&(rPkt.getData()[2] < block[0])) {
+						readReceive();
+					}
+				}
+				
 				
 				if (verbose) {
 					System.out.print("Received ");
@@ -481,13 +560,24 @@ public class Server {
 					sPkt  = new DatagramPacket (errorData, errorData.length, rPkt.getAddress(), rPkt.getPort());
 					send(sPkt);
 				}
-				
+				if(!(rPkt.getData()[1] == 0x04 || rPkt.getData()[1] == 0x05 )){
+					if (verbose) System.out.println(error4);
+					
+					byte[] errorData =createErrorMsg((byte)4, error4.getBytes());
+					sPkt  = new DatagramPacket(errorData, errorData.length, rPkt.getAddress(), rPkt.getPort());
+					send(sPkt);
+					quit();
+				}
+
 				// While received error packet, handle error.
 				while (rPkt.getData()[1] == 5) {
 					if (rPkt.getData()[3]==5) {
 						System.out.println("Data sent to incorrect client, attempting to retransfer");
 						send(sPkt);
-						receive();
+
+						while ((0xff & rPkt.getData()[3]) + 256 * (0xff & rPkt.getData()[2]) < (0xff & block[1]) + 256 * (0xff & block[0])) {
+							readReceive();
+						}
 						
 						if (verbose) {
 		 					System.out.print("Received ");
