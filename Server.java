@@ -206,7 +206,7 @@ public class Server {
 			System.out.println("V - Toggle verbose mode");
 			System.out.println("C - Change server directory");
 			System.out.println("Q - Quit");
-			System.out.print("Test: "); System.out.print("    Verbose: "); System.out.println(verbose);
+			System.out.print("Verbose: "); System.out.println(verbose);
 		}
 		
 		/**
@@ -374,7 +374,7 @@ public class Server {
  					System.out.print("Opcode ");
  					System.out.println(new Integer(rPkt.getData()[1]));
  					System.out.print("Block ");
- 					System.out.println( (int)rPkt.getData()[3] );
+ 					System.out.println(0xff & rPkt.getData()[3] + 256 * (0xff & rPkt.getData()[2]));
  					
  					System.out.println();
  				}

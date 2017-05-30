@@ -370,8 +370,8 @@ public class Client {
 		// Build the data buffer for the RRQ.
 		byte[] request = buildRQ(file, readReq);
 
-		// Hold the block number and opcode.  The block number starts at zero to simplify the increment logic.
-		byte[] block = {0x00, 0x00};
+		// Hold the block number and opcode.
+		byte[] block = {0x00, 0x01};
 		byte[] opcode = {0x00, 0x04};
 
 		sock.setSoTimeout(0);
@@ -418,7 +418,7 @@ public class Client {
 				System.out.print("Opcode ");
 				System.out.println(new Integer(rcvPkt.getData()[1]));
 				System.out.println(new String(rcvPkt.getData()));
-				System.out.print("Block "); System.out.println((int) rcvPkt.getData()[3]);
+				System.out.print("Block "); System.out.println(0xff & rcvPkt.getData()[3] + 256 * (0xff & rcvPkt.getData()[2]));
 			}
 
 			
@@ -484,8 +484,6 @@ public class Client {
 					quit();
 				}
 			}
-	
-			if (block[1]++ == (byte)0xff) block[0]++;
 
 			data = new byte[rcvPkt.getLength() - 4];
 			System.arraycopy(rcvPkt.getData(), 4, data, 0, data.length);
@@ -499,6 +497,7 @@ public class Client {
 			sndPkt = new DatagramPacket(request, request.length, target, port);
 
 			send();
+			if (block[1]++ == (byte)0xff) block[0]++;
 
 		} while (rcvPkt.getLength() > 515);
 		
