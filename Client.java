@@ -113,6 +113,7 @@ public class Client {
 				success = true;
 			} catch (SocketTimeoutException e) {
 				if (verbose) System.out.println("Receive timed out.  Retransmitting.");
+				send();
 				success = false;
 			}
 		}
