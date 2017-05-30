@@ -245,7 +245,6 @@ public class Client {
 			send();
 
 			while (!success) {
-				System.out.println(0xff & block[1] + 256 * (0xff & block[0]));
 				writeReceive();
 				if (rcvPkt.getData()[3] == block[1] && rcvPkt.getData()[2] == block[0]) success = true;
 			}
@@ -414,7 +413,15 @@ public class Client {
 				receive();
 			}
 			
-			if (rcvPkt.getData()[3] != block[1] || rcvPkt.getData()[2] != block[0]) continue;
+			if ((rcvPkt.getData()[3] != block[1] || rcvPkt.getData()[2] != block[0]) && ((0xff & rcvPkt.getData()[3] + 256 * (0xff & rcvPkt.getData()[2])) != (0xff & block[1] + 256 * (0xff & block[0])) - 1)) {
+				System.out.print(0xff & rcvPkt.getData()[3] + 256 * (0xff & rcvPkt.getData()[2])); System.out.print(" "); System.out.println(0xff & block[1] + 256 * (0xff & block[0]) - 1);
+				continue;
+			}
+			
+			if ((0xff & rcvPkt.getData()[3] + 256 * (0xff & rcvPkt.getData()[2])) == (0xff & block[1] + 256 * (0xff & block[0]) - 1)) {
+				send();
+				continue;
+			}
 			
 			if (verbose) {
 				System.out.println("Received packet");
@@ -422,6 +429,7 @@ public class Client {
 				System.out.println(new Integer(rcvPkt.getData()[1]));
 				System.out.println(new String(rcvPkt.getData()));
 				System.out.print("Block "); System.out.println(0xff & rcvPkt.getData()[3] + 256 * (0xff & rcvPkt.getData()[2]));
+				System.out.println();
 			}
 
 			
@@ -496,6 +504,12 @@ public class Client {
 			request = new byte[4];
 			System.arraycopy(opcode, 0, request, 0, 2);
 			System.arraycopy(block, 0, request, 2, 2);
+			
+			if (verbose) {
+				System.out.print("Sending acknowledge for block ");
+				System.out.println(0xff & block[1] + 256 * (0xff & block[0]));
+				System.out.println();
+			}
 
 			sndPkt = new DatagramPacket(request, request.length, target, port);
 

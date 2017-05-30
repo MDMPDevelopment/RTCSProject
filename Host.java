@@ -183,6 +183,9 @@ public class Host {
 			System.out.print("Opcode ");
 			System.out.println(new Integer(rcvPkt1.getData()[1]));
 			System.out.println(new String(rcvPkt1.getData()));
+			System.out.print("Block ");
+			System.out.println(0xff & rcvPkt1.getData()[3] + 256 * (0xff & rcvPkt1.getData()[2]));
+			System.out.println();
 		}
 	}
 
@@ -203,6 +206,9 @@ public class Host {
 			System.out.print("Opcode ");
 			System.out.println(new Integer(rcvPkt2.getData()[1]));
 			System.out.println(new String(rcvPkt2.getData()));
+			System.out.print("Block ");
+			System.out.println(0xff & rcvPkt2.getData()[3] + 256 * (0xff & rcvPkt2.getData()[2]));
+			System.out.println();
 		}
 	}
 

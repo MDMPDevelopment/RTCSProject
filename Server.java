@@ -319,6 +319,7 @@ public class Server {
 					success = true;
 				} catch (SocketTimeoutException e) {
 					if (verbose) System.out.println("Receive timed out.  Retransmitting.");
+					send(sPkt);
 					success = false;
 				}
 			}
@@ -367,7 +368,6 @@ public class Server {
 				if ((rPkt.getData()[3] != block[1] || rPkt.getData()[2] != block[0]) && ((0xff & rPkt.getData()[3] + 256 * (0xff & rPkt.getData()[2])) != (0xff & block[1] + 256 * (0xff & block[0])) - 1)) continue;
 				
 				if ((0xff & rPkt.getData()[3] + 256 * (0xff & rPkt.getData()[2])) == (0xff & block[1] + 256 * (0xff & block[0]) - 1)) {
-					System.out.print(0xff & rPkt.getData()[3] + 256 * (0xff & rPkt.getData()[2])); System.out.print(" "); System.out.println(0xff & block[1] + 256 * (0xff & block[0]) - 1);
 					send(sPkt);
 					continue;
 				}
@@ -381,7 +381,6 @@ public class Server {
  					System.out.println(new Integer(rPkt.getData()[1]));
  					System.out.print("Block ");
  					System.out.println(0xff & rPkt.getData()[3] + 256 * (0xff & rPkt.getData()[2]));
- 					
  					System.out.println();
  				}
 				
@@ -530,6 +529,8 @@ public class Server {
 					System.out.println(new String(response));
 					System.out.print("Opcode ");
 					System.out.println(new Integer(response[1]));
+					System.out.print("Block ");
+ 					System.out.println(0xff & block[1] + 256 * (0xff & block[0]));
 					System.out.println();
 				}
 				
@@ -541,12 +542,15 @@ public class Server {
 					if (rPkt.getData()[3] == block[1] && rPkt.getData()[2] == block[0]) success = true;
 				}
 				
+				success = false;
 				
 				if (verbose) {
 					System.out.print("Received ");
 					System.out.println(new String(rPkt.getData()));
 					System.out.print("Opcode ");
 					System.out.println(new Integer(rPkt.getData()[1]));
+					System.out.print("Block ");
+ 					System.out.println(0xff & rPkt.getData()[3] + 256 * (0xff & rPkt.getData()[2]));
 					System.out.println();
 				}
 				
