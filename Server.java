@@ -364,7 +364,12 @@ public class Server {
 			do {
 				receive();
 				
-				if (rPkt.getData()[3] != block[1] || rPkt.getData()[2] != block[0]) continue;
+				if ((rPkt.getData()[3] != block[1] || rPkt.getData()[2] != block[0]) && ((0xff & rPkt.getData()[3] + 256 * (0xff & rPkt.getData()[2])) != (0xff & block[1] + 256 * (0xff & block[0])) - 1)) continue;
+				
+				if ((0xff & rPkt.getData()[3] + 256 * (0xff & rPkt.getData()[2])) != (0xff & block[1] + 256 * (0xff & block[0]) - 1)) {
+					send(sPkt);
+					continue;
+				}
 				
 				if (verbose && rPkt.getData()[1] == 0x03) {
  					System.out.print("Received ");

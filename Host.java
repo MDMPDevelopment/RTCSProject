@@ -253,7 +253,7 @@ public class Host {
 				if (rcvPkt1.getData()[1] <= (byte)0x03) receive1();
 				else if (rcvPkt1.getData()[1] == 0x04) return;
 			}
-			
+
 			send(sndPkt, sndRcvSok);
 
 			if (errorReq == DUPLICATECLIENTPKT&&packetNum ==0)
@@ -305,20 +305,25 @@ public class Host {
 				packetNum--;
 			}
 			if(errorReq == DELAYSERVER&& packetNum ==0){
-
-
-
 				delay(delay);
-				send(sndPkt, sndSok);
 				errorReq=NORMAL;
-
 			}
 			if(errorReq==LOSESERVERPKT &&packetNum==0){
 				errorReq=NORMAL;
-			}else{
-				send(sndPkt, sndSok);
+				if (rcvPkt2.getData()[1] == (byte)0x03) {
+					System.out.println("This one.");
+					receive2();
+				}
+				else if (rcvPkt2.getData()[1] == (byte)0x04) {
+					System.out.println("The other one.");
+					return;
+				}
 			}
+
+			send(sndPkt, sndSok);
+
 			if(errorReq == DUPLICATESERVERPKT &&packetNum == 0){
+				delay(delay);
 				send(sndPkt, sndSok);
 				errorReq = NORMAL;
 			}
