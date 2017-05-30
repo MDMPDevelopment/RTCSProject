@@ -113,6 +113,7 @@ public class Client {
 				success = true;
 			} catch (SocketTimeoutException e) {
 				if (verbose) System.out.println("Receive timed out.  Retransmitting.");
+				send();
 				success = false;
 			}
 		}
@@ -157,8 +158,8 @@ public class Client {
 	 * @throws IOException
 	 */
 	private void startWrite() throws IOException {
-		int sizeRead;
-		int recBlock;
+		int sizeRead, recBlock;
+		boolean success;
 
 		String file = pickFile();
 
@@ -179,8 +180,10 @@ public class Client {
 		try {
 			in = new BufferedInputStream(new FileInputStream("Client/" + file));
 		} catch (FileNotFoundException e) {
-			System.out.println("File name " + file + " could not be found. Please check permissions or spelling.");
+			System.out.println("File name " + file + " could not be found. Please check spelling.");
 			quit();
+		} catch (SecurityException e) {
+			System.out.println("You don't have access to " + file + ". Please check permissions.");
 		}
 		// Build the WRQ packet from the request array.
 		if (verbose) System.out.println("Sending request.");
@@ -218,6 +221,8 @@ public class Client {
 		 *   - Read in a new set of data.
 		 */
 		while (sizeRead != -1) {
+			success = false;
+			
 			request = new byte[4 + sizeRead];
 
 			System.arraycopy(opcode, 0, request, 0, 2);
@@ -231,18 +236,17 @@ public class Client {
 				System.out.println(port);
 				System.out.print("Opcode ");
 				System.out.println(new Integer(request[1]));
+				System.out.print("Block "); System.out.println(0xff & block[1] + 256 * (0xff & block[0]));
 				System.out.println();
 			}
 
 			sndPkt = new DatagramPacket(request, request.length, target, port);
 
 			send();
-			if(rcvPkt==null){
+
+			while (!success) {
 				writeReceive();
-			}else{
-				while ((rcvPkt.getData()[3]< block[1] )&&(rcvPkt.getData()[2] < block[0])) {
-					writeReceive();
-				}
+				if (rcvPkt.getData()[3] == block[1] && rcvPkt.getData()[2] == block[0]) success = true;
 			}
 
 			if (verbose) {
@@ -250,6 +254,7 @@ public class Client {
 				System.out.print("Opcode ");
 				System.out.println(new Integer(rcvPkt.getData()[1]));
 				System.out.println(new String(rcvPkt.getData()));
+				System.out.print("Block "); System.out.println(0xff & rcvPkt.getData()[3] + 256 * (0xff & rcvPkt.getData()[2]));
 				System.out.println();
 			}
 			if(!(rcvPkt.getData()[1] == 0x04 || rcvPkt.getData()[1] == 0x05 )){
@@ -289,7 +294,7 @@ public class Client {
 
 					send();
 					
-					while ((rcvPkt.getData()[3]< block[1] )&&(rcvPkt.getData()[2] < block[0])) {
+					while ((rcvPkt.getData()[3] != block[1]) && (rcvPkt.getData()[2] != block[0])) {
 						writeReceive();
 					}
 					
@@ -337,6 +342,12 @@ public class Client {
 			if (block[1]++ == (byte)0xff) block[0]++;
 
 			sizeRead = in.read(data);
+			
+			if (sndPkt.getLength() == 516 && sizeRead == -1) {
+				request = new byte[4]; request[0] = (byte)0; request[1] = (byte)3; request[2] = block[0]; request[3] = block[1];
+				sndPkt = new DatagramPacket(request, 4, target, port);
+				send();
+			}
 		}
 
 		in.close();
@@ -367,8 +378,8 @@ public class Client {
 		// Build the data buffer for the RRQ.
 		byte[] request = buildRQ(file, readReq);
 
-		// Hold the block number and opcode.  The block number starts at zero to simplify the increment logic.
-		byte[] block = {0x00, 0x00};
+		// Hold the block number and opcode.
+		byte[] block = {0x00, 0x01};
 		byte[] opcode = {0x00, 0x04};
 
 		sock.setSoTimeout(0);
@@ -405,16 +416,25 @@ public class Client {
 			if (first) {
 				first = false;
 			} else {
-				while ((rcvPkt.getData()[3]< block[1] )&&(rcvPkt.getData()[2] < block[0])) {
-					receive();
-				}
+				receive();
 			}
-
+			
+			if ((rcvPkt.getData()[3] != block[1] || rcvPkt.getData()[2] != block[0]) && ((0xff & rcvPkt.getData()[3] + 256 * (0xff & rcvPkt.getData()[2])) != (0xff & block[1] + 256 * (0xff & block[0])) - 1)) {
+				continue;
+			}
+			
+			if ((0xff & rcvPkt.getData()[3] + 256 * (0xff & rcvPkt.getData()[2])) == (0xff & block[1] + 256 * (0xff & block[0]) - 1)) {
+				send();
+				continue;
+			}
+			
 			if (verbose) {
 				System.out.println("Received packet");
 				System.out.print("Opcode ");
 				System.out.println(new Integer(rcvPkt.getData()[1]));
 				System.out.println(new String(rcvPkt.getData()));
+				System.out.print("Block "); System.out.println(0xff & rcvPkt.getData()[3] + 256 * (0xff & rcvPkt.getData()[2]));
+				System.out.println();
 			}
 
 			
@@ -480,8 +500,6 @@ public class Client {
 					quit();
 				}
 			}
-	
-			if (block[1]++ == (byte)0xff) block[0]++;
 
 			data = new byte[rcvPkt.getLength() - 4];
 			System.arraycopy(rcvPkt.getData(), 4, data, 0, data.length);
@@ -491,10 +509,17 @@ public class Client {
 			request = new byte[4];
 			System.arraycopy(opcode, 0, request, 0, 2);
 			System.arraycopy(block, 0, request, 2, 2);
+			
+			if (verbose) {
+				System.out.print("Sending acknowledge for block ");
+				System.out.println(0xff & block[1] + 256 * (0xff & block[0]));
+				System.out.println();
+			}
 
 			sndPkt = new DatagramPacket(request, request.length, target, port);
 
 			send();
+			if (block[1]++ == (byte)0xff) block[0]++;
 
 		} while (rcvPkt.getLength() > 515);
 		

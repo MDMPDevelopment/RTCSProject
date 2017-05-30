@@ -26,7 +26,7 @@ public class Host {
 	private static final int LOSESERVERPKT = 13;
 	private static final int LOSECLIENTPKT = 14;
 	private boolean  verbose, reset;
-	private int targetPort, returnPort, test, errorReq,delay, packetNum, serverPkt, clientPkt;
+	private int targetPort, returnPort, errorReq,delay, packetNum, serverPkt, clientPkt;
 	private DatagramSocket port23, sndRcvSok, sndSok;
 	private DatagramPacket rcvPkt1, rcvPkt2, sndPkt;
 	private InetAddress target1, target2;
@@ -45,7 +45,6 @@ public class Host {
 
 		verbose = false;
 		reset = false;
-		test = 0;
 		targetPort = 69;
 
 		new UI().start();
@@ -127,12 +126,12 @@ public class Host {
 		System.exit(0);
 	}
 
-	
+
 	private void delay(int ms){
 		try {
-		Thread.sleep(ms);
+			Thread.sleep(ms);
 		} catch (InterruptedException e) {
-		e.printStackTrace();
+			e.printStackTrace();
 		}
 
 	}
@@ -156,7 +155,7 @@ public class Host {
 
 		receive(rcvPkt1, port23);
 
-	
+
 
 		if (verbose) {
 			System.out.println("Client ");
@@ -184,6 +183,9 @@ public class Host {
 			System.out.print("Opcode ");
 			System.out.println(new Integer(rcvPkt1.getData()[1]));
 			System.out.println(new String(rcvPkt1.getData()));
+			System.out.print("Block ");
+			System.out.println(0xff & rcvPkt1.getData()[3] + 256 * (0xff & rcvPkt1.getData()[2]));
+			System.out.println();
 		}
 	}
 
@@ -204,6 +206,9 @@ public class Host {
 			System.out.print("Opcode ");
 			System.out.println(new Integer(rcvPkt2.getData()[1]));
 			System.out.println(new String(rcvPkt2.getData()));
+			System.out.print("Block ");
+			System.out.println(0xff & rcvPkt2.getData()[3] + 256 * (0xff & rcvPkt2.getData()[2]));
+			System.out.println();
 		}
 	}
 
@@ -213,7 +218,7 @@ public class Host {
 	 * Should not be called before receive1().
 	 */
 	public void forward() {
-		
+
 		DatagramSocket errorSocket;
 		clientPkt--;
 		if ((errorReq == CHANGEOPCODECLIENT || errorReq == CHANGEOPCODECLIENTv) && clientPkt ==0) {
@@ -230,7 +235,7 @@ public class Host {
 		target2 = rcvPkt1.getAddress();
 		returnPort = rcvPkt1.getPort();
 
-		
+
 		if (errorReq == CHANGETIDCLIENT && clientPkt==0) {
 			try {
 				errorSocket = new DatagramSocket();
@@ -241,32 +246,30 @@ public class Host {
 
 			}
 		} else { 
-			if(errorReq == DELAYCLIENT || errorReq == DUPLICATECLIENTPKT ||errorReq == LOSECLIENTPKT)
-			{
+			if(errorReq == DELAYCLIENT || errorReq == DUPLICATECLIENTPKT ||errorReq == LOSECLIENTPKT) {
 				packetNum--;
 			}
-			if(errorReq == DELAYCLIENT&&packetNum ==0){
-			
-				
-					
+			if(errorReq == DELAYCLIENT&&packetNum ==0) {
 				delay(delay);
 				errorReq=NORMAL;
-				
 			}
-			
+
 			if(errorReq==LOSECLIENTPKT &&packetNum == 0){
 				errorReq=NORMAL;
-			}else{
-			send(sndPkt, sndRcvSok);
+				if (rcvPkt1.getData()[1] <= (byte)0x03) receive1();
+				else if (rcvPkt1.getData()[1] == 0x04) return;
 			}
+
+			send(sndPkt, sndRcvSok);
+
 			if (errorReq == DUPLICATECLIENTPKT&&packetNum ==0)
 			{
 				delay(delay);
 				send(sndPkt, sndRcvSok);
 				errorReq = NORMAL;
-				
+
 			}
-			
+
 		}
 	}
 
@@ -278,7 +281,7 @@ public class Host {
 	public void forwardReply() {
 		DatagramSocket errorSocket;
 		serverPkt--;
-	
+
 		if ((errorReq == CHANGEOPCODESERVER || errorReq == CHANGEOPCODESERVERv) && serverPkt ==0) {
 			byte[] data = changeOpcode(rcvPkt2);
 			rcvPkt2.setData(data);
@@ -288,7 +291,7 @@ public class Host {
 			rcvPkt1.setData(data);
 			errorReq = NORMAL;
 		}
-		
+
 		sndPkt = new DatagramPacket(rcvPkt2.getData(), rcvPkt2.getLength(), target2, returnPort);
 
 		targetPort = rcvPkt2.getPort();
@@ -308,24 +311,23 @@ public class Host {
 				packetNum--;
 			}
 			if(errorReq == DELAYSERVER&& packetNum ==0){
-				
-		
-					
 				delay(delay);
-				
 				errorReq=NORMAL;
-				
 			}
 			if(errorReq==LOSESERVERPKT &&packetNum==0){
 				errorReq=NORMAL;
-			}else{
-				send(sndPkt, sndSok);
+				if (rcvPkt2.getData()[1] == (byte)0x03) receive2();
+				else if (rcvPkt2.getData()[1] == (byte)0x04) return;
 			}
+
+			send(sndPkt, sndSok);
+
 			if(errorReq == DUPLICATESERVERPKT &&packetNum == 0){
+				delay(delay);
 				send(sndPkt, sndSok);
 				errorReq = NORMAL;
 			}
-			
+
 		}
 	}
 
@@ -366,78 +368,78 @@ public class Host {
 				command = input.nextLine();
 
 				switch (command.toLowerCase().charAt(0)) {
-					case 'q': quit = true;
-							  quit();
-							  break;
-					case 'v': verbose = !verbose;
-						  	  break;
-					case 'r': reset = true;
-						  	  break;
-					case 'e': listErrors();
-							  break;
-					case '1': x = promptClientOrServer(); 
-							if(x == 1){
-								errorReq = CHANGEOPCODECLIENT;
-								getClientPacket();
-							}else if(x == 2){
-								errorReq= CHANGEOPCODESERVER;
-								getServerPacket();
-							}
-						  	  break;
-					case '2': x = promptClientOrServer(); 
-							if(x == 1){
-								errorReq = CHANGELENGTHCLIENT;
-								getClientPacket();
-							}else if(x == 2){
-								errorReq= CHANGELENGTHSERVER;
-								getServerPacket();
-							}
-							  break;
-					case '3': x = promptClientOrServer(); 
-							if(x == 1){
-								errorReq = CHANGETIDCLIENT;
-								getClientPacket();
-							}else if(x == 2){
-								errorReq= CHANGETIDSERVER;
-								getServerPacket();
-							}
-							  break;
-					
-					case '4': x = promptClientOrServer(); 
-							if(x == 1){
-								errorReq = CHANGEOPCODECLIENTv;
-								getClientPacket();
-							}else if(x == 2){
-								errorReq= CHANGEOPCODESERVERv;
-								getServerPacket();
-							}
-							break;
-					case '5': x = promptClientOrServer(); 
-							if(x == 1){
-								errorReq = DELAYCLIENT;
-							}else if(x == 2){
-								errorReq= DELAYSERVER;
-							}
-							askForParameters();
-							break;
-				
-					case '6': x = promptClientOrServer(); 
-							if(x == 1){
-								errorReq = DUPLICATECLIENTPKT;
-							}else if(x == 2){
-								errorReq= DUPLICATESERVERPKT;
-							}
-							askForParameters();
-							break;
-					
-					case '7': x = promptClientOrServer(); 
-							if(x == 1){
-								errorReq = LOSECLIENTPKT;
-							}else if(x == 2){
-								errorReq= LOSESERVERPKT;
-							}
-							getPacket();
-							break;
+				case 'q': quit = true;
+				quit();
+				break;
+				case 'v': verbose = !verbose;
+				break;
+				case 'r': reset = true;
+				break;
+				case 'e': listErrors();
+				break;
+				case '1': x = promptClientOrServer(); 
+				if(x == 1){
+					errorReq = CHANGEOPCODECLIENT;
+					getClientPacket();
+				}else if(x == 2){
+					errorReq= CHANGEOPCODESERVER;
+					getServerPacket();
+				}
+				break;
+				case '2': x = promptClientOrServer(); 
+				if(x == 1){
+					errorReq = CHANGELENGTHCLIENT;
+					getClientPacket();
+				}else if(x == 2){
+					errorReq= CHANGELENGTHSERVER;
+					getServerPacket();
+				}
+				break;
+				case '3': x = promptClientOrServer(); 
+				if(x == 1){
+					errorReq = CHANGETIDCLIENT;
+					getClientPacket();
+				}else if(x == 2){
+					errorReq= CHANGETIDSERVER;
+					getServerPacket();
+				}
+				break;
+
+				case '4': x = promptClientOrServer(); 
+				if(x == 1){
+					errorReq = CHANGEOPCODECLIENTv;
+					getClientPacket();
+				}else if(x == 2){
+					errorReq= CHANGEOPCODESERVERv;
+					getServerPacket();
+				}
+				break;
+				case '5': x = promptClientOrServer(); 
+				if(x == 1){
+					errorReq = DELAYCLIENT;
+				}else if(x == 2){
+					errorReq= DELAYSERVER;
+				}
+				askForParameters();
+				break;
+
+				case '6': x = promptClientOrServer(); 
+				if(x == 1){
+					errorReq = DUPLICATECLIENTPKT;
+				}else if(x == 2){
+					errorReq= DUPLICATESERVERPKT;
+				}
+				askForParameters();
+				break;
+
+				case '7': x = promptClientOrServer(); 
+				if(x == 1){
+					errorReq = LOSECLIENTPKT;
+				}else if(x == 2){
+					errorReq= LOSESERVERPKT;
+				}
+				getPacket();
+				break;
 				}
 			}
 		}
@@ -447,7 +449,7 @@ public class Host {
 			delay = input.nextInt();
 			System.out.println("Which packet #?");
 			packetNum = input.nextInt();
-			
+
 		}
 		public void getPacket(){
 			Scanner input = new Scanner(System.in);

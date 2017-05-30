@@ -25,9 +25,11 @@ public class Server {
 	
 	private DatagramPacket request;
 	
-	private Boolean valid, test, verbose;
+	private Boolean valid, verbose;
 	
 	private String dir;
+	
+	public boolean exit;
 	
 	public Server() {
 		try {
@@ -37,7 +39,7 @@ public class Server {
 		}
 		
 		verbose = false;
-		test = false;
+		exit = false;
 		
 		dir = defaultDir;
 		
@@ -51,7 +53,7 @@ public class Server {
 		if (verbose) System.out.println("Closing port 69.");
 		port69.close();
 		System.out.println("Exiting.");
-		System.exit(0);
+		exit = true;
 	}
 	
 	/**
@@ -201,11 +203,10 @@ public class Server {
 		 * Prints out the user's options.
 		 */
 		private void printUI() {
-			System.out.println("T - Toggle test mode");
 			System.out.println("V - Toggle verbose mode");
 			System.out.println("C - Change server directory");
 			System.out.println("Q - Quit");
-			System.out.print("Test: "); System.out.print(test); System.out.print("    Verbose: "); System.out.println(verbose);
+			System.out.print("Verbose: "); System.out.println(verbose);
 		}
 		
 		/**
@@ -224,8 +225,6 @@ public class Server {
 					switch (command.toLowerCase().charAt(0)) {
 						case 'q': quit = true;
 							  quit();
-							  break;
-						case 't': test = !test;
 							  break;
 						case 'c': changeDir();
 								break;
@@ -320,6 +319,7 @@ public class Server {
 					success = true;
 				} catch (SocketTimeoutException e) {
 					if (verbose) System.out.println("Receive timed out.  Retransmitting.");
+					send(sPkt);
 					success = false;
 				}
 			}
@@ -363,12 +363,13 @@ public class Server {
 			 *    - Build and send the response.
 			 */
 			do {
-				if (rPkt == null) {
-					receive();
-				} else {
-					while ((rPkt.getData()[3]< block[1] )&&(rPkt.getData()[2] < block[0])) {
-						receive();
-					}
+				receive();
+				
+				if ((rPkt.getData()[3] != block[1] || rPkt.getData()[2] != block[0]) && ((0xff & rPkt.getData()[3] + 256 * (0xff & rPkt.getData()[2])) != (0xff & block[1] + 256 * (0xff & block[0])) - 1)) continue;
+				
+				if ((0xff & rPkt.getData()[3] + 256 * (0xff & rPkt.getData()[2])) == (0xff & block[1] + 256 * (0xff & block[0]) - 1)) {
+					send(sPkt);
+					continue;
 				}
 				
 				if (verbose && rPkt.getData()[1] == 0x03) {
@@ -379,8 +380,7 @@ public class Server {
  					System.out.print("Opcode ");
  					System.out.println(new Integer(rPkt.getData()[1]));
  					System.out.print("Block ");
- 					System.out.println( (int)rPkt.getData()[3] );
- 					
+ 					System.out.println(0xff & rPkt.getData()[3] + 256 * (0xff & rPkt.getData()[2]));
  					System.out.println();
  				}
 				
@@ -409,7 +409,7 @@ public class Server {
 						
 						send(sPkt);
 
-						while ((rPkt.getData()[3]< block[1] )&&(rPkt.getData()[2] < block[0])) {
+						while ((rPkt.getData()[3] != block[1]) && (rPkt.getData()[2] != block[0])) {
 							receive();
 						}
 						
@@ -438,8 +438,6 @@ public class Server {
 					}
 				}
 				
-				if (block[1]++ == (byte)0xff) block[0]++;
-				
 				// Separate data from header.
 				data = new byte[rPkt.getLength() - 4];
 				System.arraycopy(rPkt.getData(), 4, data, 0, rPkt.getLength() - 4);
@@ -467,6 +465,7 @@ public class Server {
 				
 				sPkt = new DatagramPacket(response, response.length, target, port);
 				send(sPkt);
+				if (block[1]++ == (byte)0xff) block[0]++;
 			} while (rPkt.getLength() == 516);
 			
 			out.close();
@@ -482,6 +481,8 @@ public class Server {
 			byte[] response;
 			byte[] data = new byte[512];
 			byte[] block = {0x00, 0x00};
+			
+			boolean success = false;
 			
 			//Opens file to read.
 			if (verbose) System.out.println("Opening file.");
@@ -528,27 +529,28 @@ public class Server {
 					System.out.println(new String(response));
 					System.out.print("Opcode ");
 					System.out.println(new Integer(response[1]));
+					System.out.print("Block ");
+ 					System.out.println(0xff & block[1] + 256 * (0xff & block[0]));
 					System.out.println();
 				}
 				
 				sPkt = new DatagramPacket(response, sizeRead + 4, target, port);
 				send(sPkt);
 				
-				if(rPkt==null){
+				while (!success) {
 					readReceive();
-				}else{
-					
-					while (rPkt.getData()[3]< block[1]-1 &&(rPkt.getData()[2] < block[0])) {
-						readReceive();
-					}
+					if (rPkt.getData()[3] == block[1] && rPkt.getData()[2] == block[0]) success = true;
 				}
 				
+				success = false;
 				
 				if (verbose) {
 					System.out.print("Received ");
 					System.out.println(new String(rPkt.getData()));
 					System.out.print("Opcode ");
 					System.out.println(new Integer(rPkt.getData()[1]));
+					System.out.print("Block ");
+ 					System.out.println(0xff & rPkt.getData()[3] + 256 * (0xff & rPkt.getData()[2]));
 					System.out.println();
 				}
 				
@@ -600,6 +602,12 @@ public class Server {
 				}
 				
 				sizeRead = in.read(data);
+				
+				if (sPkt.getLength() == 516 && sizeRead == -1) {
+					data = new byte[4]; data[0] = (byte)0; data[1] = (byte)3; data[2] = block[0]; data[3] = block[1];
+					sPkt = new DatagramPacket(data, 4, target, port);
+					send(sPkt);
+				}
 			}
 			
 			in.close();
@@ -629,7 +637,7 @@ public class Server {
 	public static void main(String[] args) throws IOException {
 		Server server = new Server();
 		
-		while (true) {
+		while (!server.exit) {
 			server.receive();
 			server.parsePacket();
 		}
