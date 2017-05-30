@@ -294,8 +294,9 @@ public class Client {
 
 					send();
 					
-					while ((rcvPkt.getData()[3] != block[1]) && (rcvPkt.getData()[2] != block[0])) {
+					while (!success) {
 						writeReceive();
+						if (rcvPkt.getData()[3] == block[1] && rcvPkt.getData()[2] == block[0]) success = true;
 					}
 					
 					if (verbose) {
