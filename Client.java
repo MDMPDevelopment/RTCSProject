@@ -1,3 +1,4 @@
+
 import java.net.DatagramSocket;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -8,14 +9,18 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.Scanner;
 
 public class Client {
 	private static final byte readReq = 0x01;
 	private static final byte writeReq = 0x02;
+	private static final int timeout_ms = 500;
 	private static final String mode = "octet";
+	private static final String error4 = "Error 4: Illegal TFTP operation";
 	private static final String badTID = "Invalid TID";
+	private static final String defaultDir = "./Client/";
 
 	private byte[] rData;
 
@@ -25,14 +30,23 @@ public class Client {
 
 	private int port, TID;
 	private boolean test, verbose;
+	
+	private String dir;
 
 	public Client() throws UnknownHostException, SocketException {
 		target = InetAddress.getLocalHost();
 
 		test = false;
 		verbose = false;
+	
+		dir = defaultDir;
 
-		sock = new DatagramSocket();
+		try {
+			sock = new DatagramSocket();
+		} catch (SocketException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		}
 
 		new UI().start();
 	}
@@ -48,6 +62,14 @@ public class Client {
 		file = stream.nextLine();
 
 		return file;
+	}
+	
+	private void changeDir() {
+		Scanner stream = new Scanner(System.in);
+		System.out.println("Enter the full path of the new directory.");
+		System.out.println("Please use / instead of \\, and include a terminating /");
+		dir = stream.nextLine();
+		if (dir.charAt(dir.length() - 1) != '/') dir = dir + "/";
 	}
 
 	/**
@@ -66,7 +88,7 @@ public class Client {
 	/**
 	 * Receive from sock into rcvPkt.
 	 */
-	private void receive() {
+	private void receive() throws SocketTimeoutException {
 		rData = new byte[516];
 		rcvPkt = new DatagramPacket(rData, 516);
 
@@ -74,14 +96,25 @@ public class Client {
 			sock.receive(rcvPkt);
 			
 			//Received error packet.
-			if (rcvPkt.getData()[1]==5) {
-				if (rcvPkt.getData()[3] == 4) {
-					System.out.println("Illegal TFTP operation was requested.");
-					quit();
-				}
-			}
+			
+		} catch (SocketTimeoutException e) {
+			throw e;
 		} catch (IOException e) {
 			e.printStackTrace();
+		}
+	}
+	
+	private void writeReceive() {
+		boolean success = false;
+		
+		while (!success) {
+			try {
+				receive();
+				success = true;
+			} catch (SocketTimeoutException e) {
+				if (verbose) System.out.println("Receive timed out.  Retransmitting.");
+				success = false;
+			}
 		}
 	}
 
@@ -125,6 +158,7 @@ public class Client {
 	 */
 	private void startWrite() throws IOException {
 		int sizeRead;
+		int recBlock;
 
 		String file = pickFile();
 
@@ -137,18 +171,22 @@ public class Client {
 
 		// Opens the file selected for reading.
 		if (verbose) System.out.println("Opening file.");
+		
 		BufferedInputStream in = null;
-		try{
-		in = new BufferedInputStream(new FileInputStream("Client/" + file));
-		}catch (FileNotFoundException e) 
-		{
+		
+		sock.setSoTimeout(timeout_ms);
+		
+		try {
+			in = new BufferedInputStream(new FileInputStream("Client/" + file));
+		} catch (FileNotFoundException e) {
 			System.out.println("File name " + file + " could not be found. Please check permissions or spelling.");
+			quit();
 		}
 		// Build the WRQ packet from the request array.
 		if (verbose) System.out.println("Sending request.");
 		sndPkt = new DatagramPacket(request, request.length, target, test ? 23 : 69);
 		send();
-		receive();
+		writeReceive();
 
 		// Set the destination port and address based on the request response.
 		port = rcvPkt.getPort();
@@ -199,7 +237,13 @@ public class Client {
 			sndPkt = new DatagramPacket(request, request.length, target, port);
 
 			send();
-			receive();
+			if(rcvPkt==null){
+				writeReceive();
+			}else{
+				while ((rcvPkt.getData()[3]< block[1] )&&(rcvPkt.getData()[2] < block[0])) {
+					writeReceive();
+				}
+			}
 
 			if (verbose) {
 				System.out.println("Received packet");
@@ -208,7 +252,14 @@ public class Client {
 				System.out.println(new String(rcvPkt.getData()));
 				System.out.println();
 			}
-
+			if(!(rcvPkt.getData()[1] == 0x04 || rcvPkt.getData()[1] == 0x05 )){
+				if (verbose) System.out.println(error4);
+				
+				byte[] errorData =createErrorMsg((byte)4, error4.getBytes());
+				sndPkt  = new DatagramPacket(errorData, errorData.length, rcvPkt.getAddress(), rcvPkt.getPort());
+				send();
+				quit();
+			}
 			if(rcvPkt.getPort() != TID) {
 				if (verbose) System.out.println(badTID);
 				
@@ -216,10 +267,13 @@ public class Client {
 				sndPkt = new DatagramPacket (errorData, errorData.length, target, port);
 				
 				send();
-				//receive?
 			}
 
 			if(rcvPkt.getData()[1]==5) {
+				if (rcvPkt.getData()[3] == 4) {
+					System.out.println("Illegal TFTP operation was requested.");
+					quit();
+				}
 				if (rcvPkt.getData()[3]==5) {
 					System.out.println("Data sent to incorrect server, attempting to retransfer");
 					
@@ -234,7 +288,11 @@ public class Client {
 					}
 
 					send();
-					receive(); 
+					
+					while ((rcvPkt.getData()[3]< block[1] )&&(rcvPkt.getData()[2] < block[0])) {
+						writeReceive();
+					}
+					
 					if (verbose) {
 						System.out.println("Received packet");
 						System.out.print("Opcode ");
@@ -276,7 +334,7 @@ public class Client {
 				}
 			
 
-			if (++block[1] == 0) block[0]++;
+			if (block[1]++ == (byte)0xff) block[0]++;
 
 			sizeRead = in.read(data);
 		}
@@ -296,8 +354,15 @@ public class Client {
 
 		// Prompt the user to select a file to read, then open and/or create the file to write to.
 		String file = pickFile();
+		BufferedOutputStream out=null;
 		if (verbose) System.out.println("Opening file.");
-		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream("Client/" + file));
+		try {
+			out= new BufferedOutputStream(new FileOutputStream("Client/" + file));
+		} catch (FileNotFoundException e) {
+			System.out.println("Path Client/" + file + " could not be found. Please check permissions or spelling.");
+			quit();
+		}
+		
 
 		// Build the data buffer for the RRQ.
 		byte[] request = buildRQ(file, readReq);
@@ -306,6 +371,8 @@ public class Client {
 		byte[] block = {0x00, 0x00};
 		byte[] opcode = {0x00, 0x04};
 
+		sock.setSoTimeout(0);
+		
 		// Build the RRQ packet from the request array, send the request, then wait for a response.
 		if (verbose) System.out.println("Sending request.");
 		sndPkt = new DatagramPacket(request, request.length, target, test ? 23 : 69);
@@ -337,7 +404,11 @@ public class Client {
 			// Used to prevent a double receive() on the first block. 
 			if (first) {
 				first = false;
-			} else receive();
+			} else {
+				while ((rcvPkt.getData()[3]< block[1] )&&(rcvPkt.getData()[2] < block[0])) {
+					receive();
+				}
+			}
 
 			if (verbose) {
 				System.out.println("Received packet");
@@ -346,6 +417,15 @@ public class Client {
 				System.out.println(new String(rcvPkt.getData()));
 			}
 
+			
+			if(!(rcvPkt.getData()[1] == 0x03 || rcvPkt.getData()[1] == 0x05 )){
+				if (verbose) System.out.println(error4);
+				
+				byte[] errorData =createErrorMsg((byte)4, error4.getBytes());
+				sndPkt  = new DatagramPacket(errorData, errorData.length, rcvPkt.getAddress(), rcvPkt.getPort());
+				send();
+				quit();
+			}
 			if(rcvPkt.getPort() != TID) {
 				if (verbose) System.out.println(badTID);
 				byte [] errorData = createErrorMsg((byte) 5, badTID.getBytes());
@@ -357,11 +437,18 @@ public class Client {
 			}
 
 			if(rcvPkt.getData()[1]==5) {
+				if (rcvPkt.getData()[3] == 4) {
+					System.out.println("Illegal TFTP operation was requested.");
+					quit();
+				}
 				if (rcvPkt.getData()[3]==5) {
 					System.out.println("Acknowledge went to wrong server, attempting to retransfer");
 
 					send();
-					receive();
+					
+					while ((rcvPkt.getData()[3]< block[1] )&&(rcvPkt.getData()[2] < block[0])) {
+						receive();
+					}
 				
 					if (verbose) {
 						System.out.println("Received packet");
@@ -393,8 +480,8 @@ public class Client {
 					quit();
 				}
 			}
-
-			if (++block[1] == 0) block[0]++;
+	
+			if (block[1]++ == (byte)0xff) block[0]++;
 
 			data = new byte[rcvPkt.getLength() - 4];
 			System.arraycopy(rcvPkt.getData(), 4, data, 0, data.length);
@@ -408,6 +495,7 @@ public class Client {
 			sndPkt = new DatagramPacket(request, request.length, target, port);
 
 			send();
+
 		} while (rcvPkt.getLength() > 515);
 		
 		out.close();
@@ -469,6 +557,7 @@ public class Client {
 			System.out.println("W - Initiate file write");
 			System.out.println("R - Initiate file read");
 			System.out.println("I - Set the target IP (Default localhost)");
+			System.out.println("C - Change client directory.");
 			System.out.println("Q - Quit");
 			System.out.print("Test: "); System.out.print(test); System.out.print("    Verbose: "); System.out.println(verbose);
 		}
@@ -484,21 +573,26 @@ public class Client {
 			while (!quit) {
 				printUI();
 				command = input.nextLine();
-
-				switch (command.toLowerCase().charAt(0)) {
-					case 'q': quit = true;
-							  quit();
-							  break;
-					case 't': test = !test;
-							  break;
-					case 'v': verbose = !verbose;
-							  break;
-					case 'w': startWrite();
-							  break;
-					case 'r': startRead();
-							  break;
-					case 'i': setTarget();
-							  break;
+				
+				if (command.isEmpty()==false){
+					switch (command.toLowerCase().charAt(0)) {
+						case 'q': quit = true;
+							  	quit();
+							  	break;
+						case 't': test = !test;
+								break;
+						case 'v': verbose = !verbose;
+								break;
+						case 'w': startWrite();
+								break;
+						case 'r': startRead();
+								break;
+						case 'i': setTarget();
+							 	break;
+						case 'c': changeDir();
+								break;
+					}
+				
 				}
 			}
 		}
