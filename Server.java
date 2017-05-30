@@ -366,7 +366,8 @@ public class Server {
 				
 				if ((rPkt.getData()[3] != block[1] || rPkt.getData()[2] != block[0]) && ((0xff & rPkt.getData()[3] + 256 * (0xff & rPkt.getData()[2])) != (0xff & block[1] + 256 * (0xff & block[0])) - 1)) continue;
 				
-				if ((0xff & rPkt.getData()[3] + 256 * (0xff & rPkt.getData()[2])) != (0xff & block[1] + 256 * (0xff & block[0]) - 1)) {
+				if ((0xff & rPkt.getData()[3] + 256 * (0xff & rPkt.getData()[2])) == (0xff & block[1] + 256 * (0xff & block[0]) - 1)) {
+					System.out.print(0xff & rPkt.getData()[3] + 256 * (0xff & rPkt.getData()[2])); System.out.print(" "); System.out.println(0xff & block[1] + 256 * (0xff & block[0]) - 1);
 					send(sPkt);
 					continue;
 				}

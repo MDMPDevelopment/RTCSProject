@@ -310,14 +310,8 @@ public class Host {
 			}
 			if(errorReq==LOSESERVERPKT &&packetNum==0){
 				errorReq=NORMAL;
-				if (rcvPkt2.getData()[1] == (byte)0x03) {
-					System.out.println("This one.");
-					receive2();
-				}
-				else if (rcvPkt2.getData()[1] == (byte)0x04) {
-					System.out.println("The other one.");
-					return;
-				}
+				if (rcvPkt2.getData()[1] == (byte)0x03) receive2();
+				else if (rcvPkt2.getData()[1] == (byte)0x04) return;
 			}
 
 			send(sndPkt, sndSok);
