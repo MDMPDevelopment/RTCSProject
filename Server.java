@@ -25,7 +25,7 @@ public class Server {
 	
 	private DatagramPacket request;
 	
-	private Boolean valid, test, verbose;
+	private Boolean valid, verbose;
 	
 	private String dir;
 	
@@ -39,7 +39,6 @@ public class Server {
 		}
 		
 		verbose = false;
-		test = false;
 		exit = false;
 		
 		dir = defaultDir;
@@ -204,11 +203,10 @@ public class Server {
 		 * Prints out the user's options.
 		 */
 		private void printUI() {
-			System.out.println("T - Toggle test mode");
 			System.out.println("V - Toggle verbose mode");
 			System.out.println("C - Change server directory");
 			System.out.println("Q - Quit");
-			System.out.print("Test: "); System.out.print(test); System.out.print("    Verbose: "); System.out.println(verbose);
+			System.out.print("Test: "); System.out.print("    Verbose: "); System.out.println(verbose);
 		}
 		
 		/**
@@ -227,8 +225,6 @@ public class Server {
 					switch (command.toLowerCase().charAt(0)) {
 						case 'q': quit = true;
 							  quit();
-							  break;
-						case 't': test = !test;
 							  break;
 						case 'c': changeDir();
 								break;
