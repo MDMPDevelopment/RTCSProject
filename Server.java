@@ -269,7 +269,7 @@ public class Server {
 		 */
 		public Transfer(boolean type, DatagramPacket request, String filename) {
 			this.type = type;
-			this.filename = "Server/" + filename.trim();
+			this.filename = dir + filename.trim();
 			
 			target = request.getAddress();
 			port = request.getPort();
@@ -487,12 +487,15 @@ public class Server {
 			//Opens file to read.
 			if (verbose) System.out.println("Opening file.");
 			BufferedInputStream in=null;
-			if (verbose) System.out.println("Opening file.");
 			try {
 				in= new BufferedInputStream(new FileInputStream(filename));
 			} catch (FileNotFoundException e) {
-				System.out.println("Path " + filename + " could not be found.");
-				quit();
+				String errorMsg = "The file " + filename + " could not be found.";
+				byte[] msg = createErrorMsg((byte)0x01, errorMsg.getBytes());
+				if (verbose) System.out.println(errorMsg);
+				DatagramPacket errorPkt = new DatagramPacket(msg, msg.length, target, port);
+				send(errorPkt);
+				return;
 			}
 			
 			

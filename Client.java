@@ -419,7 +419,7 @@ public class Client {
 				receive();
 			}
 			
-			if ((rcvPkt.getData()[3] != block[1] || rcvPkt.getData()[2] != block[0]) && ((0xff & rcvPkt.getData()[3] + 256 * (0xff & rcvPkt.getData()[2])) != (0xff & block[1] + 256 * (0xff & block[0])) - 1)) {
+			if (rcvPkt.getData()[1] == (byte)0x03 && (rcvPkt.getData()[3] != block[1] || rcvPkt.getData()[2] != block[0]) && ((0xff & rcvPkt.getData()[3] + 256 * (0xff & rcvPkt.getData()[2])) != (0xff & block[1] + 256 * (0xff & block[0])) - 1)) {
 				continue;
 			}
 			
