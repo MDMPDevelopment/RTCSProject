@@ -438,7 +438,7 @@ public class Client {
 			}
 
 			
-			if(!(rcvPkt.getData()[1] == 0x03 || rcvPkt.getData()[1] == 0x05 )){
+			if(!(rcvPkt.getData()[1] == (byte)0x03 || rcvPkt.getData()[1] == (byte)0x05 )){
 				if (verbose) System.out.println(error4);
 				
 				byte[] errorData =createErrorMsg((byte)4, error4.getBytes());
@@ -456,12 +456,8 @@ public class Client {
 				
 			}
 
-			if(rcvPkt.getData()[1]==5) {
-				if (rcvPkt.getData()[3] == 4) {
-					System.out.println("Illegal TFTP operation was requested.");
-					quit();
-				}
-				if (rcvPkt.getData()[3]==5) {
+			if(rcvPkt.getData()[1]==(byte)0x05) {
+				if (rcvPkt.getData()[3]==(byte)5) {
 					System.out.println("Acknowledge went to wrong server, attempting to retransfer");
 
 					send();
@@ -477,7 +473,7 @@ public class Client {
 						System.out.println(new String(rcvPkt.getData()));
 					}
 				}
-				if (rcvPkt.getData()[3] == 0x04) {
+				if (rcvPkt.getData()[3] == (byte)0x04) {
 					// Invalid TFTP operation. Unrecoverable by definition.
 					byte[] errorMsg = new byte[rcvPkt.getLength()];
 					
@@ -489,7 +485,10 @@ public class Client {
 					
 					quit();
 				}
-				if(rcvPkt.getData()[3] == 2)
+				if (rcvPkt.getData()[3] == (byte)0x03) {
+					
+				}
+				if(rcvPkt.getData()[3] == (byte)1)
 				{
 					byte[] errorMsg = new byte[rcvPkt.getLength()];
 					
