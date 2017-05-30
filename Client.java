@@ -158,12 +158,10 @@ public class Client {
 	 * @throws IOException
 	 */
 	private void startWrite() throws IOException {
-		int sizeRead;
-		int recBlock;
+		int sizeRead, recBlock;
+		boolean success;
 
 		String file = pickFile();
-		
-		boolean success = false;
 
 		// Holds the block number. Since this is a write operation, the lowest block number the client uses is 01.
 		byte[] block = {0x00, 0x01};
@@ -223,6 +221,8 @@ public class Client {
 		 *   - Read in a new set of data.
 		 */
 		while (sizeRead != -1) {
+			success = false;
+			
 			request = new byte[4 + sizeRead];
 
 			System.arraycopy(opcode, 0, request, 0, 2);
@@ -236,6 +236,7 @@ public class Client {
 				System.out.println(port);
 				System.out.print("Opcode ");
 				System.out.println(new Integer(request[1]));
+				System.out.print("Block "); System.out.println(0xff & block[1] + 256 * (0xff & block[0]));
 				System.out.println();
 			}
 
@@ -244,6 +245,7 @@ public class Client {
 			send();
 
 			while (!success) {
+				System.out.println(0xff & block[1] + 256 * (0xff & block[0]));
 				writeReceive();
 				if (rcvPkt.getData()[3] == block[1] && rcvPkt.getData()[2] == block[0]) success = true;
 			}
@@ -253,7 +255,7 @@ public class Client {
 				System.out.print("Opcode ");
 				System.out.println(new Integer(rcvPkt.getData()[1]));
 				System.out.println(new String(rcvPkt.getData()));
-				System.out.print("Block "); System.out.println((int)rcvPkt.getData()[3]);
+				System.out.print("Block "); System.out.println(0xff & rcvPkt.getData()[3] + 256 * (0xff & rcvPkt.getData()[2]));
 				System.out.println();
 			}
 			if(!(rcvPkt.getData()[1] == 0x04 || rcvPkt.getData()[1] == 0x05 )){
