@@ -372,7 +372,7 @@ public class Server {
 					continue;
 				}
 				
-				if (verbose && rPkt.getData()[1] == 0x03) {
+				if (verbose && rPkt.getData()[1] == (byte)0x03) {
  					System.out.print("Received ");
  					System.out.println(new String(rPkt.getData()));
  					System.out.print(rPkt.getLength());
@@ -393,7 +393,7 @@ public class Server {
 					send(sPkt);
 					continue;
 				}
-				if(!(rPkt.getData()[1] == 0x03 || rPkt.getData()[1] == 0x05 )){
+				if(!(rPkt.getData()[1] == (byte)0x03 || rPkt.getData()[1] == (byte)0x05 )){
 					if (verbose) System.out.println(error4);
 					
 					byte[] errorData =createErrorMsg((byte)4, error4.getBytes());
@@ -403,8 +403,8 @@ public class Server {
 				}
 
 				// While received error packet, handle error.
-				while (rPkt.getData()[1] == 0x05) {
-					if (rPkt.getData()[3] == 0x05) {
+				while (rPkt.getData()[1] == (byte)0x05) {
+					if (rPkt.getData()[3] == (byte)0x05) {
 						if (verbose) System.out.println("Acknowledge went to incorrect client, attempting to retransfer");
 						
 						send(sPkt);
@@ -414,7 +414,7 @@ public class Server {
 						}
 						
 						// If the next packet is correct, print packet information.
-						if (verbose && rPkt.getData()[1] == 0x03) {
+						if (verbose && rPkt.getData()[1] == (byte)0x03) {
 							System.out.print("Received ");
 		 					System.out.println(new String(rPkt.getData()));
 		 					System.out.print(rPkt.getLength());
@@ -425,7 +425,7 @@ public class Server {
 		 					System.out.println(0xff & rPkt.getData()[3] + 256 * (0xff & rPkt.getData()[2]));
 		 					System.out.println();
 		 				}
-					} else if (rPkt.getData()[3] == 0x04) {
+					} else if (rPkt.getData()[3] == (byte)0x04) {
 						// Invalid TFTP operation. Unrecoverable by definition.
 						byte[] errorMsg = new byte[rPkt.getLength()];
 						
@@ -565,7 +565,7 @@ public class Server {
 					sPkt  = new DatagramPacket (errorData, errorData.length, rPkt.getAddress(), rPkt.getPort());
 					send(sPkt);
 				}
-				if(!(rPkt.getData()[1] == 0x04 || rPkt.getData()[1] == 0x05 )){
+				if(!(rPkt.getData()[1] == (byte)0x04 || rPkt.getData()[1] == (byte)0x05 )){
 					if (verbose) System.out.println(error4);
 					
 					byte[] errorData =createErrorMsg((byte)4, error4.getBytes());
@@ -575,8 +575,8 @@ public class Server {
 				}
 
 				// While received error packet, handle error.
-				while (rPkt.getData()[1] == 5) {
-					if (rPkt.getData()[3]==5) {
+				while (rPkt.getData()[1] == (byte)5) {
+					if (rPkt.getData()[3]==(byte)5) {
 						System.out.println("Data sent to incorrect client, attempting to retransfer");
 						send(sPkt);
 
@@ -591,7 +591,7 @@ public class Server {
 		 					System.out.println(new Integer(rPkt.getData()[1]));
 		 					System.out.println();
 		 				}
-					} else if (rPkt.getData()[3] == 0x04) {
+					} else if (rPkt.getData()[3] == (byte)0x04) {
 						// Invalid TFTP operation. Unrecoverable by definition.
 						byte[] errorMsg = new byte[rPkt.getLength()];
 						

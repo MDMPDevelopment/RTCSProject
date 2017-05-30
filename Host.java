@@ -242,6 +242,8 @@ public class Host {
 				send(sndPkt, errorSocket);
 				errorSocket.close();
 				errorReq = NORMAL;
+				if (sndPkt.getData()[1] == (byte)0x03) receive1();
+				else if (sndPkt.getData()[1] == (byte) 0x04) return;
 			} catch (SocketException e) {
 
 			}
@@ -302,6 +304,8 @@ public class Host {
 				System.out.println("New port: " + errorSocket.getLocalPort());
 				errorSocket.close();
 				errorReq = NORMAL;
+				if (sndPkt.getData()[1] == (byte)0x03) receive2();
+				else if (sndPkt.getData()[1] == (byte) 0x04) return;
 			} catch (SocketException e) {
 
 			}
