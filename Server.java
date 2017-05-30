@@ -602,6 +602,12 @@ public class Server {
 				}
 				
 				sizeRead = in.read(data);
+				
+				if (sPkt.getLength() == 516 && sizeRead == -1) {
+					data = new byte[4]; data[0] = (byte)0; data[1] = (byte)3; data[2] = block[0]; data[3] = block[1];
+					sPkt = new DatagramPacket(data, 4, target, port);
+					send(sPkt);
+				}
 			}
 			
 			in.close();

@@ -342,6 +342,12 @@ public class Client {
 			if (block[1]++ == (byte)0xff) block[0]++;
 
 			sizeRead = in.read(data);
+			
+			if (sndPkt.getLength() == 516 && sizeRead == -1) {
+				request = new byte[4]; request[0] = (byte)0; request[1] = (byte)3; request[2] = block[0]; request[3] = block[1];
+				sndPkt = new DatagramPacket(request, 4, target, port);
+				send();
+			}
 		}
 
 		in.close();
@@ -414,7 +420,6 @@ public class Client {
 			}
 			
 			if ((rcvPkt.getData()[3] != block[1] || rcvPkt.getData()[2] != block[0]) && ((0xff & rcvPkt.getData()[3] + 256 * (0xff & rcvPkt.getData()[2])) != (0xff & block[1] + 256 * (0xff & block[0])) - 1)) {
-				System.out.print(0xff & rcvPkt.getData()[3] + 256 * (0xff & rcvPkt.getData()[2])); System.out.print(" "); System.out.println(0xff & block[1] + 256 * (0xff & block[0]) - 1);
 				continue;
 			}
 			
