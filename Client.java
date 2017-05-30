@@ -161,6 +161,8 @@ public class Client {
 		int recBlock;
 
 		String file = pickFile();
+		
+		boolean success = false;
 
 		// Holds the block number. Since this is a write operation, the lowest block number the client uses is 01.
 		byte[] block = {0x00, 0x01};
@@ -179,8 +181,10 @@ public class Client {
 		try {
 			in = new BufferedInputStream(new FileInputStream("Client/" + file));
 		} catch (FileNotFoundException e) {
-			System.out.println("File name " + file + " could not be found. Please check permissions or spelling.");
+			System.out.println("File name " + file + " could not be found. Please check spelling.");
 			quit();
+		} catch (SecurityException e) {
+			System.out.println("You don't have access to " + file + ". Please check permissions.");
 		}
 		// Build the WRQ packet from the request array.
 		if (verbose) System.out.println("Sending request.");
@@ -237,12 +241,10 @@ public class Client {
 			sndPkt = new DatagramPacket(request, request.length, target, port);
 
 			send();
-			if(rcvPkt==null){
+
+			while (!success) {
 				writeReceive();
-			}else{
-				while ((rcvPkt.getData()[3]< block[1] )&&(rcvPkt.getData()[2] < block[0])) {
-					writeReceive();
-				}
+				if (rcvPkt.getData()[3] == block[1] && rcvPkt.getData()[2] == block[0]) success = true;
 			}
 
 			if (verbose) {
@@ -250,6 +252,7 @@ public class Client {
 				System.out.print("Opcode ");
 				System.out.println(new Integer(rcvPkt.getData()[1]));
 				System.out.println(new String(rcvPkt.getData()));
+				System.out.print("Block "); System.out.println((int)rcvPkt.getData()[3]);
 				System.out.println();
 			}
 			if(!(rcvPkt.getData()[1] == 0x04 || rcvPkt.getData()[1] == 0x05 )){
@@ -289,7 +292,7 @@ public class Client {
 
 					send();
 					
-					while ((rcvPkt.getData()[3]< block[1] )&&(rcvPkt.getData()[2] < block[0])) {
+					while ((rcvPkt.getData()[3] != block[1]) && (rcvPkt.getData()[2] != block[0])) {
 						writeReceive();
 					}
 					
@@ -405,16 +408,17 @@ public class Client {
 			if (first) {
 				first = false;
 			} else {
-				while ((rcvPkt.getData()[3]< block[1] )&&(rcvPkt.getData()[2] < block[0])) {
-					receive();
-				}
+				receive();
 			}
-
+			
+			if (rcvPkt.getData()[3] != block[1] || rcvPkt.getData()[2] != block[0]) continue;
+			
 			if (verbose) {
 				System.out.println("Received packet");
 				System.out.print("Opcode ");
 				System.out.println(new Integer(rcvPkt.getData()[1]));
 				System.out.println(new String(rcvPkt.getData()));
+				System.out.print("Block "); System.out.println((int) rcvPkt.getData()[3]);
 			}
 
 			

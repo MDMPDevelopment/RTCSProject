@@ -29,6 +29,8 @@ public class Server {
 	
 	private String dir;
 	
+	public boolean exit;
+	
 	public Server() {
 		try {
 			port69 = new DatagramSocket(69);
@@ -38,6 +40,7 @@ public class Server {
 		
 		verbose = false;
 		test = false;
+		exit = false;
 		
 		dir = defaultDir;
 		
@@ -51,7 +54,7 @@ public class Server {
 		if (verbose) System.out.println("Closing port 69.");
 		port69.close();
 		System.out.println("Exiting.");
-		System.exit(0);
+		exit = true;
 	}
 	
 	/**
@@ -363,13 +366,9 @@ public class Server {
 			 *    - Build and send the response.
 			 */
 			do {
-				if (rPkt == null) {
-					receive();
-				} else {
-					while ((rPkt.getData()[3]< block[1] )&&(rPkt.getData()[2] < block[0])) {
-						receive();
-					}
-				}
+				receive();
+				
+				if (rPkt.getData()[3] != block[1] || rPkt.getData()[2] != block[0]) continue;
 				
 				if (verbose && rPkt.getData()[1] == 0x03) {
  					System.out.print("Received ");
@@ -409,7 +408,7 @@ public class Server {
 						
 						send(sPkt);
 
-						while ((rPkt.getData()[3]< block[1] )&&(rPkt.getData()[2] < block[0])) {
+						while ((rPkt.getData()[3] != block[1]) && (rPkt.getData()[2] != block[0])) {
 							receive();
 						}
 						
@@ -438,8 +437,6 @@ public class Server {
 					}
 				}
 				
-				if (block[1]++ == (byte)0xff) block[0]++;
-				
 				// Separate data from header.
 				data = new byte[rPkt.getLength() - 4];
 				System.arraycopy(rPkt.getData(), 4, data, 0, rPkt.getLength() - 4);
@@ -467,6 +464,7 @@ public class Server {
 				
 				sPkt = new DatagramPacket(response, response.length, target, port);
 				send(sPkt);
+				if (block[1]++ == (byte)0xff) block[0]++;
 			} while (rPkt.getLength() == 516);
 			
 			out.close();
@@ -482,6 +480,8 @@ public class Server {
 			byte[] response;
 			byte[] data = new byte[512];
 			byte[] block = {0x00, 0x00};
+			
+			boolean success = false;
 			
 			//Opens file to read.
 			if (verbose) System.out.println("Opening file.");
@@ -534,13 +534,9 @@ public class Server {
 				sPkt = new DatagramPacket(response, sizeRead + 4, target, port);
 				send(sPkt);
 				
-				if(rPkt==null){
+				while (!success) {
 					readReceive();
-				}else{
-					
-					while (rPkt.getData()[3]< block[1]-1 &&(rPkt.getData()[2] < block[0])) {
-						readReceive();
-					}
+					if (rPkt.getData()[3] == block[1] && rPkt.getData()[2] == block[0]) success = true;
 				}
 				
 				
@@ -629,7 +625,7 @@ public class Server {
 	public static void main(String[] args) throws IOException {
 		Server server = new Server();
 		
-		while (true) {
+		while (!server.exit) {
 			server.receive();
 			server.parsePacket();
 		}
