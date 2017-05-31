@@ -504,9 +504,6 @@ public class Client {
 					
 					quit();
 				}
-				if (rcvPkt.getData()[3] == (byte)0x03) {
-					
-				}
 				if(rcvPkt.getData()[3] == (byte)1)
 				{
 					byte[] errorMsg = new byte[rcvPkt.getLength()];
@@ -521,7 +518,16 @@ public class Client {
 
 			data = new byte[rcvPkt.getLength() - 4];
 			System.arraycopy(rcvPkt.getData(), 4, data, 0, data.length);
-			out.write(data, 0, data.length);
+			try {
+				out.write(data, 0, data.length);
+			} catch (IOException e) {
+				String errorMsg = "Disk full or allocation exceeded.";
+				byte[] msg = createErrorMsg((byte)0x03, errorMsg.getBytes());
+				if (verbose) System.out.println(errorMsg);
+				sndPkt = new DatagramPacket(msg, msg.length, target, port);
+				send();
+				return;
+			}
 			out.flush();
 
 			request = new byte[4];

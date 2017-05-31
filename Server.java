@@ -440,7 +440,7 @@ public class Server {
 						System.arraycopy(rPkt.getData(), 4, errorMsg, 0, rPkt.getLength() - 5);
 						
 						if (verbose) System.out.println("Error code 4, Invalid TFTP Operation");
-						System.out.println(new String(errorMsg));
+						if (verbose) System.out.println(new String(errorMsg));
 						
 						quit();
 					}
@@ -463,7 +463,16 @@ public class Server {
 					System.out.println();
 				}
 				
-				out.write(data, 0, data.length);
+				try {
+					out.write(data, 0, data.length);
+				} catch (IOException e) {
+					String errorMsg = "Disk full or allocation exceeded.";
+					byte[] msg = createErrorMsg((byte)0x03, errorMsg.getBytes());
+					if (verbose) System.out.println(errorMsg);
+					DatagramPacket errorPkt = new DatagramPacket(msg, msg.length, target, port);
+					send(errorPkt);
+					return;
+				}
 				out.flush();
 				
 				// Build and send acknowledge packet.
@@ -624,6 +633,15 @@ public class Server {
 						System.out.println(new String(errorMsg));
 						
 						quit();
+					}
+					if(rPkt.getData()[3] == (byte)3)
+					{
+						byte[] errorMsg = new byte[rPkt.getLength()];
+						
+						System.arraycopy(rPkt.getData(), 4, errorMsg, 0, rPkt.getLength() - 5);
+						if (verbose) System.out.println("Error code 3, disk full");
+						System.out.println(errorMsg);
+						return;
 					}
 				}
 				
