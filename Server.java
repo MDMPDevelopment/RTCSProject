@@ -331,13 +331,24 @@ public class Server {
 		 */
 		private void write() throws IOException {
 			byte[] data;
+			BufferedOutputStream out;
 			
 			byte[] response = new byte[4];
 			byte[] block = {0x00, 0x00};
 			
 			// Opens the file to write.
 			if (verbose) System.out.println("Opening file.");
-			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(filename));
+			
+			try {
+				out = new BufferedOutputStream(new FileOutputStream(filename));
+			} catch (FileNotFoundException e) {
+				String errorMsg = "You don't have permission to write to " + filename + ".";
+				byte[] msg = createErrorMsg((byte)0x02, errorMsg.getBytes());
+				if (verbose) System.out.println(errorMsg);
+				DatagramPacket errorPkt = new DatagramPacket(msg, msg.length, target, port);
+				send(errorPkt);
+				return;
+			}
 			
 			sock.setSoTimeout(0);
 			
@@ -496,6 +507,13 @@ public class Server {
 			} catch (FileNotFoundException e) {
 				String errorMsg = "The file " + filename + " could not be found.";
 				byte[] msg = createErrorMsg((byte)0x01, errorMsg.getBytes());
+				if (verbose) System.out.println(errorMsg);
+				DatagramPacket errorPkt = new DatagramPacket(msg, msg.length, target, port);
+				send(errorPkt);
+				return;
+			} catch (SecurityException e) {
+				String errorMsg = "You don't have permission to read " + filename + ".";
+				byte[] msg = createErrorMsg((byte)0x02, errorMsg.getBytes());
 				if (verbose) System.out.println(errorMsg);
 				DatagramPacket errorPkt = new DatagramPacket(msg, msg.length, target, port);
 				send(errorPkt);

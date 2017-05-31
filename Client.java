@@ -184,12 +184,20 @@ public class Client {
 			quit();
 		} catch (SecurityException e) {
 			System.out.println("You don't have access to " + file + ". Please check permissions.");
+			quit();
 		}
 		// Build the WRQ packet from the request array.
 		if (verbose) System.out.println("Sending request.");
 		sndPkt = new DatagramPacket(request, request.length, target, test ? 23 : 69);
 		send();
 		writeReceive();
+		
+		if (rcvPkt.getData()[1] == (byte)0x05 && rcvPkt.getData()[3] == (byte)0x02) {
+			byte[] errMsg = new byte[rcvPkt.getLength() - 4];
+			System.arraycopy(rcvPkt.getData(), 4, errMsg, 0, errMsg.length);
+			System.out.println(new String(errMsg));
+			quit();
+		}
 
 		// Set the destination port and address based on the request response.
 		port = rcvPkt.getPort();
@@ -373,6 +381,9 @@ public class Client {
 		} catch (FileNotFoundException e) {
 			System.out.println("Path Client/" + file + " could not be found. Please check permissions or spelling.");
 			quit();
+		} catch (SecurityException e) {
+			System.out.println("You don't have access to " + file + ". Please check permissions.");
+			quit();
 		}
 		
 
@@ -390,6 +401,13 @@ public class Client {
 		sndPkt = new DatagramPacket(request, request.length, target, test ? 23 : 69);
 		send();
 		receive();
+		
+		if (rcvPkt.getData()[1] == (byte)0x05 && rcvPkt.getData()[3] == (byte)0x02) {
+			byte[] errMsg = new byte[rcvPkt.getLength() - 4];
+			System.arraycopy(rcvPkt.getData(), 4, errMsg, 0, errMsg.length);
+			System.out.println(new String(errMsg));
+			quit();
+		}
 
 		// Set the destination port and address based on the request response.
 		target = rcvPkt.getAddress();
