@@ -1,3 +1,5 @@
+package rtcsproject;
+
 
 import java.net.DatagramSocket;
 import java.io.IOException;
@@ -96,7 +98,18 @@ public class Host {
 		rcvPkt1.setData(data);
 	
 	}
+	private void setTarget() {
+		String ip;
+		Scanner stream = new Scanner(System.in);
+		System.out.println("Enter the target IP address: ");
+		ip = stream.nextLine();
 
+		try {
+			target1 = InetAddress.getByName(ip);
+		} catch (UnknownHostException e) {
+			System.out.println("Invalid IP.");
+		}
+	}
 	/**
 	 * Changes the length of the packet to 530 bytes
 	 */
@@ -375,6 +388,7 @@ public class Host {
 		 */
 		private void printUI() {
 			System.out.println("V - Toggle verbose mode");
+			System.out.println("I - Set the target IP (Default localhost)");
 			System.out.println("E - View error simulator options");
 			System.out.println("Q - Quit");
 			System.out.println("Restart this between transfers.");
@@ -404,6 +418,8 @@ public class Host {
 				break;
 				case 'e': listErrors();
 				break;
+				case 'i': setTarget();
+			 	break;
 				case '1': x = promptClientOrServer(); 
 				if(x == 1){
 					errorReq = CHANGEOPCODECLIENT;
