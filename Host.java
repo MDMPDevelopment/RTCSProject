@@ -5,7 +5,6 @@ import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Scanner;
-
 import java.net.SocketException;
 
 public class Host {
@@ -25,6 +24,8 @@ public class Host {
 	private static final int DUPLICATECLIENTPKT = 12;
 	private static final int LOSESERVERPKT = 13;
 	private static final int LOSECLIENTPKT = 14;
+	private static final int CHANGEMODE = 15;
+	private static final String invalidMode = "sdkgjadfga";
 	private boolean  verbose, reset;
 	private int targetPort, returnPort, errorReq,delay, packetNum, serverPkt, clientPkt;
 	private DatagramSocket port23, sndRcvSok, sndSok;
@@ -77,7 +78,24 @@ public class Host {
 		}
 		return data;
 	}
-
+	private void changeMode(){
+		byte[] data = rcvPkt1.getData();
+		byte[] newmode = invalidMode.getBytes();
+		int i = 2;
+		while (data[i] != 0x00 && i < rcvPkt1.getLength()) {
+			i++;
+		}
+		i++;
+		int j =0;
+	
+		while (data[i] != 0x00 && i < rcvPkt1.getLength() && j < "netascii".length()) {
+			data[i++] = newmode[j++]; 
+			
+			
+		}
+		rcvPkt1.setData(data);
+	
+	}
 
 	/**
 	 * Changes the length of the packet to 530 bytes
@@ -155,8 +173,10 @@ public class Host {
 
 		receive(rcvPkt1, port23);
 
-
-
+		if (errorReq==CHANGEMODE){
+		changeMode();
+		errorReq=NORMAL;
+		}
 		if (verbose) {
 			System.out.println("Client ");
 			System.out.print("Opcode ");
@@ -411,8 +431,9 @@ public class Host {
 					getServerPacket();
 				}
 				break;
-
-				case '4': x = promptClientOrServer(); 
+				case '4': errorReq=CHANGEMODE;
+				break;
+				case '5': x = promptClientOrServer(); 
 				if(x == 1){
 					errorReq = CHANGEOPCODECLIENTv;
 					getClientPacket();
@@ -421,7 +442,7 @@ public class Host {
 					getServerPacket();
 				}
 				break;
-				case '5': x = promptClientOrServer(); 
+				case '6': x = promptClientOrServer(); 
 				if(x == 1){
 					errorReq = DELAYCLIENT;
 				}else if(x == 2){
@@ -430,7 +451,7 @@ public class Host {
 				askForParameters();
 				break;
 
-				case '6': x = promptClientOrServer(); 
+				case '7': x = promptClientOrServer(); 
 				if(x == 1){
 					errorReq = DUPLICATECLIENTPKT;
 				}else if(x == 2){
@@ -439,7 +460,7 @@ public class Host {
 				askForParameters();
 				break;
 
-				case '7': x = promptClientOrServer(); 
+				case '8': x = promptClientOrServer(); 
 				if(x == 1){
 					errorReq = LOSECLIENTPKT;
 				}else if(x == 2){
@@ -482,10 +503,11 @@ public class Host {
 			System.out.println("1 - Change Opcode (invalid opcode)");
 			System.out.println("2 - Change Length");
 			System.out.println("3 - Change Transfer ID");
-			System.out.println("4 - Change Opcode (valid opcode)");
-			System.out.println("5 - Delay transfer");
-			System.out.println("6 - Duplicate packet");
-			System.out.println("7 - Lose packet");
+			System.out.println("4 - Change mode (invalid)");
+			System.out.println("5 - Change Opcode (valid opcode)");
+			System.out.println("6 - Delay transfer");
+			System.out.println("7 - Duplicate packet");
+			System.out.println("8 - Lose packet");
 		}
 
 		public void run() {
