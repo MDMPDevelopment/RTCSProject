@@ -546,7 +546,7 @@ public class Server {
 				
 				while (!success) {
 					readReceive();
-					if (rPkt.getData()[3] == block[1] && rPkt.getData()[2] == block[0]) success = true;
+					if (rPkt.getData()[1] != (byte) 0x04 || (rPkt.getData()[3] == block[1] && rPkt.getData()[2] == block[0])) success = true;
 				}
 				
 				success = false;
@@ -581,11 +581,12 @@ public class Server {
 				// While received error packet, handle error.
 				while (rPkt.getData()[1] == (byte)5) {
 					if (rPkt.getData()[3]==(byte)5) {
-						System.out.println("Data sent to incorrect client, attempting to retransfer");
+						if (verbose) System.out.println("Data sent to incorrect client, attempting to retransfer");
 						send(sPkt);
 
-						while ((0xff & rPkt.getData()[3]) + 256 * (0xff & rPkt.getData()[2]) < (0xff & block[1]) + 256 * (0xff & block[0])) {
+						while (!success) {
 							readReceive();
+							if (rPkt.getData()[1] != (byte) 0x04 || (rPkt.getData()[3] == block[1] && rPkt.getData()[2] == block[0])) success = true;
 						}
 						
 						if (verbose) {
