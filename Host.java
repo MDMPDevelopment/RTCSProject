@@ -242,7 +242,10 @@ public class Host {
 				send(sndPkt, errorSocket);
 				errorSocket.close();
 				errorReq = NORMAL;
-				if (sndPkt.getData()[1] == (byte)0x03) receive1();
+				if (sndPkt.getData()[1] == (byte)0x03) {
+					receive1();
+					send(sndPkt, sndRcvSok);
+				}
 				else if (sndPkt.getData()[1] == (byte) 0x04) return;
 			} catch (SocketException e) {
 

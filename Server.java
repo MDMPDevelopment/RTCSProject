@@ -408,10 +408,7 @@ public class Server {
 						if (verbose) System.out.println("Acknowledge went to incorrect client, attempting to retransfer");
 						
 						send(sPkt);
-
-						while ((rPkt.getData()[3] != block[1]) && (rPkt.getData()[2] != block[0])) {
-							receive();
-						}
+						receive();
 						
 						// If the next packet is correct, print packet information.
 						if (verbose && rPkt.getData()[1] == (byte)0x03) {
@@ -436,6 +433,13 @@ public class Server {
 						
 						quit();
 					}
+				}
+				
+				if ((rPkt.getData()[3] != block[1] || rPkt.getData()[2] != block[0]) && ((0xff & rPkt.getData()[3] + 256 * (0xff & rPkt.getData()[2])) != (0xff & block[1] + 256 * (0xff & block[0])) - 1)) continue;
+				
+				if ((0xff & rPkt.getData()[3] + 256 * (0xff & rPkt.getData()[2])) == (0xff & block[1] + 256 * (0xff & block[0]) - 1)) {
+					send(sPkt);
+					continue;
 				}
 				
 				// Separate data from header.

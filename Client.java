@@ -246,7 +246,7 @@ public class Client {
 
 			while (!success) {
 				writeReceive();
-				if (rcvPkt.getData()[3] == block[1] && rcvPkt.getData()[2] == block[0]) success = true;
+				if (rcvPkt.getData()[1] != (byte) 0x04 || (rcvPkt.getData()[3] == block[1] && rcvPkt.getData()[2] == block[0])) success = true;
 			}
 
 			if (verbose) {
@@ -296,7 +296,7 @@ public class Client {
 					
 					while (!success) {
 						writeReceive();
-						if (rcvPkt.getData()[3] == block[1] && rcvPkt.getData()[2] == block[0]) success = true;
+						if (rcvPkt.getData()[1] != (byte) 0x04 || (rcvPkt.getData()[3] == block[1] && rcvPkt.getData()[2] == block[0])) success = true;
 					}
 					
 					if (verbose) {
