@@ -214,7 +214,12 @@ public class Client {
 			System.out.println(new String(rcvPkt.getData()));
 			System.out.println();
 		}
-
+		if(rcvPkt.getData()[1]==(byte)5) {
+			if (rcvPkt.getData()[3] == (byte)4) {
+				System.out.println("Illegal TFTP operation was requested.");
+				quit();
+			}
+		}
 		// Read in up to 512 bytes of data.
 		sizeRead = in.read(data);
 
@@ -421,7 +426,12 @@ public class Client {
 			System.out.println(port);
 			System.out.println("Starting read.");
 		}
-
+		if(rcvPkt.getData()[1]==(byte)5) {
+			if (rcvPkt.getData()[3] == (byte)4) {
+				System.out.println("Illegal TFTP operation was requested.");
+				quit();
+			}
+		}
 		/*
 		 * While the packet received is 516 bytes (4 byte header plus 512 bytes data):
 		 *   - Receive a packet.
@@ -504,6 +514,9 @@ public class Client {
 					
 					quit();
 				}
+				if (rcvPkt.getData()[3] == (byte)0x03) {
+					
+				}
 				if(rcvPkt.getData()[3] == (byte)1)
 				{
 					byte[] errorMsg = new byte[rcvPkt.getLength()];
@@ -518,16 +531,7 @@ public class Client {
 
 			data = new byte[rcvPkt.getLength() - 4];
 			System.arraycopy(rcvPkt.getData(), 4, data, 0, data.length);
-			try {
-				out.write(data, 0, data.length);
-			} catch (IOException e) {
-				String errorMsg = "Disk full or allocation exceeded.";
-				byte[] msg = createErrorMsg((byte)0x03, errorMsg.getBytes());
-				if (verbose) System.out.println(errorMsg);
-				sndPkt = new DatagramPacket(msg, msg.length, target, port);
-				send();
-				return;
-			}
+			out.write(data, 0, data.length);
 			out.flush();
 
 			request = new byte[4];
