@@ -376,13 +376,6 @@ public class Server {
 			do {
 				receive();
 				
-				if ((rPkt.getData()[3] != block[1] || rPkt.getData()[2] != block[0]) && ((0xff & rPkt.getData()[3] + 256 * (0xff & rPkt.getData()[2])) != (0xff & block[1] + 256 * (0xff & block[0])) - 1)) continue;
-				
-				if ((0xff & rPkt.getData()[3] + 256 * (0xff & rPkt.getData()[2])) == (0xff & block[1] + 256 * (0xff & block[0]) - 1)) {
-					send(sPkt);
-					continue;
-				}
-				
 				if (verbose && rPkt.getData()[1] == (byte)0x03) {
  					System.out.print("Received ");
  					System.out.println(new String(rPkt.getData()));
@@ -421,6 +414,11 @@ public class Server {
 						send(sPkt);
 						receive();
 						
+						if ((0xff & rPkt.getData()[3] + 256 * (0xff & rPkt.getData()[2])) <= (0xff & block[1] + 256 * (0xff & block[0]) - 1)) {
+							send(sPkt);
+							continue;
+						}
+						
 						// If the next packet is correct, print packet information.
 						if (verbose && rPkt.getData()[1] == (byte)0x03) {
 							System.out.print("Received ");
@@ -446,8 +444,6 @@ public class Server {
 					}
 				}
 				
-				if ((rPkt.getData()[3] != block[1] || rPkt.getData()[2] != block[0]) && ((0xff & rPkt.getData()[3] + 256 * (0xff & rPkt.getData()[2])) != (0xff & block[1] + 256 * (0xff & block[0])) - 1)) continue;
-				
 				if ((0xff & rPkt.getData()[3] + 256 * (0xff & rPkt.getData()[2])) == (0xff & block[1] + 256 * (0xff & block[0]) - 1)) {
 					send(sPkt);
 					continue;
@@ -463,23 +459,28 @@ public class Server {
 					System.out.println();
 				}
 				
-				try {
-					out.write(data, 0, data.length);
-				} catch (IOException e) {
-					String errorMsg = "Disk full or allocation exceeded.";
-					byte[] msg = createErrorMsg((byte)0x03, errorMsg.getBytes());
-					if (verbose) System.out.println(errorMsg);
-					DatagramPacket errorPkt = new DatagramPacket(msg, msg.length, target, port);
-					send(errorPkt);
-					return;
+				if ((0xff & rPkt.getData()[3] + 256 * (0xff & rPkt.getData()[2])) == (0xff & block[1] + 256 * (0xff & block[0]) - 1)) {
+					try {
+						out.write(data, 0, data.length);
+					} catch (IOException e) {
+						String errorMsg = "Disk full or allocation exceeded.";
+						byte[] msg = createErrorMsg((byte)0x03, errorMsg.getBytes());
+						if (verbose) System.out.println(errorMsg);
+						DatagramPacket errorPkt = new DatagramPacket(msg, msg.length, target, port);
+						send(errorPkt);
+						return;
+					}
+					out.flush();
+					
+					if (block[1]++ == (byte)0xff) block[0]++;
 				}
-				out.flush();
 				
 				// Build and send acknowledge packet.
 				response = new byte[4];
 				response[0] = 0x00;
 				response[1] = 0x04;
-				System.arraycopy(block, 0, response, 2, 2);
+				response[2] = rPkt.getData()[2];
+				response[3] = rPkt.getData()[3];
 				
 				if (verbose) {
 					System.out.print("Sending acknowledge for block ");
@@ -489,7 +490,6 @@ public class Server {
 				
 				sPkt = new DatagramPacket(response, response.length, target, port);
 				send(sPkt);
-				if (block[1]++ == (byte)0xff) block[0]++;
 			} while (rPkt.getLength() == 516);
 			
 			out.close();

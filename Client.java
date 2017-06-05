@@ -487,10 +487,13 @@ public class Client {
 
 					send();
 					
-					while ((rcvPkt.getData()[3]< block[1] )&&(rcvPkt.getData()[2] < block[0])) {
-						receive();
+					receive();
+					
+					if ((0xff & rcvPkt.getData()[3] + 256 * (0xff & rcvPkt.getData()[2])) <= (0xff & block[1] + 256 * (0xff & block[0]) - 1)) {
+						send();
+						continue;
 					}
-				
+					
 					if (verbose) {
 						System.out.println("Received packet");
 						System.out.print("Opcode ");
@@ -535,11 +538,12 @@ public class Client {
 
 			request = new byte[4];
 			System.arraycopy(opcode, 0, request, 0, 2);
-			System.arraycopy(block, 0, request, 2, 2);
+			request[2] = rcvPkt.getData()[2];
+			request[3] = rcvPkt.getData()[3];
 			
 			if (verbose) {
 				System.out.print("Sending acknowledge for block ");
-				System.out.println(0xff & block[1] + 256 * (0xff & block[0]));
+				System.out.println(0xff & rcvPkt.getData()[3] + 256 * (0xff & rcvPkt.getData()[2]));
 				System.out.println();
 			}
 
