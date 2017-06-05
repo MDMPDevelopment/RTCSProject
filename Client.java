@@ -448,10 +448,6 @@ public class Client {
 				receive();
 			}
 			
-			if (rcvPkt.getData()[1] == (byte)0x03 && (rcvPkt.getData()[3] != block[1] || rcvPkt.getData()[2] != block[0]) && ((0xff & rcvPkt.getData()[3] + 256 * (0xff & rcvPkt.getData()[2])) != (0xff & block[1] + 256 * (0xff & block[0])) - 1)) {
-				continue;
-			}
-			
 			if ((0xff & rcvPkt.getData()[3] + 256 * (0xff & rcvPkt.getData()[2])) == (0xff & block[1] + 256 * (0xff & block[0]) - 1)) {
 				send();
 				continue;
@@ -529,10 +525,13 @@ public class Client {
 				}
 			}
 
-			data = new byte[rcvPkt.getLength() - 4];
-			System.arraycopy(rcvPkt.getData(), 4, data, 0, data.length);
-			out.write(data, 0, data.length);
-			out.flush();
+			if (0xff & block[1] + 256 * (0xff & block[0]) == 0xff & rcvPkt.getData()[3] + 256 * (0xff & rcvPkt.getData()[2])) {
+				data = new byte[rcvPkt.getLength() - 4];
+				System.arraycopy(rcvPkt.getData(), 4, data, 0, data.length);
+				out.write(data, 0, data.length);
+				out.flush();
+				if (block[1]++ == (byte)0xff) block[0]++;
+			}
 
 			request = new byte[4];
 			System.arraycopy(opcode, 0, request, 0, 2);
@@ -547,8 +546,6 @@ public class Client {
 			sndPkt = new DatagramPacket(request, request.length, target, port);
 
 			send();
-			if (block[1]++ == (byte)0xff) block[0]++;
-
 		} while (rcvPkt.getLength() > 515);
 		
 		out.close();
